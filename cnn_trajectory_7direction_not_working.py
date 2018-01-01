@@ -14,16 +14,16 @@ from tensorflow.contrib.learn.python.learn.estimators import model_fn as model_f
 # cnn architecture based on https://matthewearl.github.io/2016/05/06/cnn-anpr/
 
 #def init(self):
-points_on_trajectory = 7 #50 # 20
+points_on_trajectory = 6
 FEATURES = [""]#, "x", "y", "z"]
 COLUMNS = ["",""]# "out_0","out_1","out_2","out_3","out_4","out_5","out_6","out_7","out_8","out_9","out_10","out_11","out_12","out_13","out_14","out_15","out_16","out_17","out_18","out_19","out_20"]        
 LABEL = [""]#out_0","out_1","out_2","out_3","out_4","out_5","out_6","out_7","out_8","out_9","out_10","out_11","out_12","out_13","out_14","out_15","out_16","out_17","out_18","out_19","out_20"]
-num_images = 20000#100000#20000#00#10000
+num_images = 40000#20000#00#10000
 dir1 = []
 lr = 0.001
 iter1 = 10#0
 batch_size = 100#0
-dir_no = 5 # num of directions
+dir_no = 6 # num of directions
 image_dir = '/home_local/shar_sc/cnn_trajectory_primitives/'
 s_direct = '/home_local/shar_sc/cnn_model/'
 out_dir = '/home_local/shar_sc/cnn_result/'
@@ -36,12 +36,14 @@ def generate_result(name, int_pred):
     2 left to right diagonal upwards /
     3 left to right diagonal down \
     4 up to down |
-    #               5 right to left diagonal down /
+    5 right to left diagonal down /
+    6 right to left -
+    7 right to left diagonal up \
     ''' 
     point1 = [randint(0, 100),randint(0, 100)] 
     point2 = point1
     jumph = 3
-    jumpv = 6
+    jumpv = 3
     lx = []
     ly = []
     for i in range(points_on_trajectory):
@@ -54,13 +56,13 @@ def generate_result(name, int_pred):
             lx.append(point2[0])
             ly.append(point2[1])        
         elif (direction == 1):
-            point2[1] = point2[1] + jumpv
+            point2[1] = point2[1] + 2*jumpv
             point1 = point2
             lx.append(point2[0])
             ly.append(point2[1])        
         elif (direction == 2):
-            point2[0] = point2[0] + jumph 
-            point2[1] = point2[1] + jumpv 
+            point2[0] = point2[0] + 2*jumph 
+            point2[1] = point2[1] + 2*jumpv 
             point1 = point2
             lx.append(point2[0])
             ly.append(point2[1])                    
@@ -71,7 +73,7 @@ def generate_result(name, int_pred):
             lx.append(point2[0])
             ly.append(point2[1])                    
         elif (direction == 4):
-            point2[0] = point2[0] #+ jumph
+            point2[0] = point2[0]
             point2[1] = point2[1] - jumpv 
             point1 = point2
             lx.append(point2[0])
@@ -79,6 +81,18 @@ def generate_result(name, int_pred):
         elif (direction == 5):
             point2[0] = point2[0] - jumph
             point2[1] = point2[1] - jumpv 
+            point1 = point2
+            lx.append(point2[0])
+            ly.append(point2[1])                    
+        elif (direction == 6):
+            point2[0] = point2[0] - 2*jumph
+            point2[1] = point2[1] 
+            point1 = point2
+            lx.append(point2[0])
+            ly.append(point2[1])                    
+        elif (direction == 7):
+            point2[0] = point2[0] - 2*jumph
+            point2[1] = point2[1] + 2*jumpv 
             point1 = point2
             lx.append(point2[0])
             ly.append(point2[1])                    
@@ -101,12 +115,14 @@ def generate_images(name):
     2 left to right diagonal upwards /
     3 left to right diagonal down \
     4 up to down |
-    #                   5 right to left diagonal down /     
+    5 right to left diagonal down /     
+    6 right to left -
+    7 right to left diagonal up \
     ''' 
     point1 = [randint(0, 100),randint(0, 100)] 
     point2 = point1
     jumph = 3
-    jumpv = 6
+    jumpv = 3
     lx = []
     ly = []
     direction_codes = []
@@ -121,14 +137,14 @@ def generate_images(name):
             ly.append(point2[1])        
             direction_codes.append(direction)
         elif (direction == 1):
-            point2[1] = point2[1] + jumpv
+            point2[1] = point2[1] + 2*jumpv
             point1 = point2
             lx.append(point2[0])
             ly.append(point2[1])        
             direction_codes.append(direction)
         elif (direction == 2):
-            point2[0] = point2[0] + jumph 
-            point2[1] = point2[1] + jumpv 
+            point2[0] = point2[0] + 2*jumph 
+            point2[1] = point2[1] + 2*jumpv 
             point1 = point2
             lx.append(point2[0])
             ly.append(point2[1])                    
@@ -141,7 +157,7 @@ def generate_images(name):
             ly.append(point2[1])                    
             direction_codes.append(direction)
         elif (direction == 4):
-            point2[0] = point2[0] #+ jumph
+            point2[0] = point2[0]
             point2[1] = point2[1] - jumpv 
             point1 = point2
             lx.append(point2[0])
@@ -154,7 +170,22 @@ def generate_images(name):
             lx.append(point2[0])
             ly.append(point2[1])             
             direction_codes.append(direction)  
-                        
+        elif (direction == 6):
+            point2[0] = point2[0] - 2*jumph
+            point2[1] = point2[1]
+            point1 = point2
+            lx.append(point2[0])
+            ly.append(point2[1])             
+            direction_codes.append(direction)  
+        elif (direction == 7):
+            point2[0] = point2[0] - 2*jumph
+            point2[1] = point2[1] + 2*jumpv
+            point1 = point2
+            lx.append(point2[0])
+            ly.append(point2[1])             
+            direction_codes.append(direction)                          
+    #img = plt.imread("/home/dao/programs/deepManipulation/1.jpg")
+    #plt.imshow(img)                
     plt.plot(lx,ly,"ks-", lw=8)        
     plt.axis('off')
     #plt.show()
@@ -167,6 +198,7 @@ def generate_images(name):
     plt.close()
     dir1.append(direction_codes)
     return direction_codes
+
     
 def execute():
     #mnist = input_data.read_data_sets('MNIST_data', validation_size=0)
@@ -228,7 +260,7 @@ def execute():
     #regressor = init_dnn()
 
     direct = image_dir + 'direc.p'
-    ''' To generate new images
+    #''' To generate new images
     for i in range(num_images):
         dirc = generate_images('fig_'+str(i))
         #print("directions:",i , dirc)

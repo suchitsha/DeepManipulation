@@ -58,7 +58,7 @@ def init(self):
             app.LABEL_sec = ["out_x","out_y","out_z"]        
         
     tf.logging.set_verbosity(tf.logging.INFO)
-    app.LEARNING_RATE = 0.01# .001 default
+    app.LEARNING_RATE = 0.000001# .001 default
     pass
 
 def execute(self):
@@ -755,7 +755,7 @@ def evaluate_data_from_file_dnn_poly(regressor, data, name=""):
         # Set model params
         model_params = {"learning_rate": app.LEARNING_RATE}
         # Instantiate Estimator
-        app.nn = tf.contrib.learn.Estimator(model_fn=model_fn, model_dir="/home_local/shar_sc/learn_motion_models_secondary_cart_motorpos_10", params=model_params)#9", params=model_params)
+        app.nn = tf.contrib.learn.Estimator(model_fn=model_fn, model_dir="/home_local/shar_sc/learn_motion_models_secondary_cart_motorpos_13", params=model_params)#9", params=model_params)
         # directory 2 for simple false , 3 for simple true        
         #TODO write model and read every time for training
         def get_train_inputs():

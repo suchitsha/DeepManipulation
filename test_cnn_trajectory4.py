@@ -24,9 +24,9 @@ lr = 0.001
 iter1 = 10#0
 batch_size = 100#0
 dir_no = 5 # num of directions
-image_dir = '/home_local/shar_sc/cnn_trajectory_primitives/'
-s_direct = '/home_local/shar_sc/cnn_model/'
-out_dir = '/home_local/shar_sc/cnn_result/'
+image_dir = '/home_local/shar_sc/cnn_test/'
+s_direct = '/home_local/shar_sc/cnn_model4/model.ckpt-199900'
+out_dir = '/home_local/shar_sc/cnn_result4/'
 #    pass
 
 def generate_result(name, int_pred):
@@ -49,7 +49,7 @@ def generate_result(name, int_pred):
         lx.append(point1[0])
         ly.append(point1[1])        
         if (direction == 0):
-            point2[0] = point2[0] + jumph
+            point2[0] = point2[0] - jumph
             point1 = point2
             lx.append(point2[0])
             ly.append(point2[1])        
@@ -59,13 +59,13 @@ def generate_result(name, int_pred):
             lx.append(point2[0])
             ly.append(point2[1])        
         elif (direction == 2):
-            point2[0] = point2[0] + jumph 
+            point2[0] = point2[0] - jumph 
             point2[1] = point2[1] + jumpv 
             point1 = point2
             lx.append(point2[0])
             ly.append(point2[1])                    
         elif (direction == 3):
-            point2[0] = point2[0] + jumph
+            point2[0] = point2[0] - jumph
             point2[1] = point2[1] - jumpv 
             point1 = point2
             lx.append(point2[0])
@@ -77,7 +77,7 @@ def generate_result(name, int_pred):
             lx.append(point2[0])
             ly.append(point2[1])                    
         elif (direction == 5):
-            point2[0] = point2[0] - jumph
+            point2[0] = point2[0] + jumph
             point2[1] = point2[1] - jumpv 
             point1 = point2
             lx.append(point2[0])
@@ -115,7 +115,7 @@ def generate_images(name):
         lx.append(point1[0])
         ly.append(point1[1])        
         if (direction == 0):
-            point2[0] = point2[0] + jumph
+            point2[0] = point2[0] - jumph
             point1 = point2
             lx.append(point2[0])
             ly.append(point2[1])        
@@ -127,14 +127,14 @@ def generate_images(name):
             ly.append(point2[1])        
             direction_codes.append(direction)
         elif (direction == 2):
-            point2[0] = point2[0] + jumph 
+            point2[0] = point2[0] - jumph 
             point2[1] = point2[1] + jumpv 
             point1 = point2
             lx.append(point2[0])
             ly.append(point2[1])                    
             direction_codes.append(direction)
         elif (direction == 3):
-            point2[0] = point2[0] + jumph
+            point2[0] = point2[0] - jumph
             point2[1] = point2[1] - jumpv 
             point1 = point2
             lx.append(point2[0])
@@ -148,7 +148,7 @@ def generate_images(name):
             ly.append(point2[1])             
             direction_codes.append(direction)                   
         elif (direction == 5):
-            point2[0] = point2[0] - jumph
+            point2[0] = point2[0] + jumph
             point2[1] = point2[1] - jumpv 
             point1 = point2
             lx.append(point2[0])
@@ -169,14 +169,12 @@ def generate_images(name):
     return direction_codes
     
 def execute():
-    #mnist = input_data.read_data_sets('MNIST_data', validation_size=0)
-    #img = mnist.train.images[2]
-    #plt.imshow(img.reshape((28, 28)), cmap='Greys_r')
     learning_rate = lr#0.001
     # Input and target placeholders
     inputs_ = tf.placeholder(tf.float32, (None, 128,128,1), name="input")
     targets_ = tf.placeholder(tf.float32, (None, points_on_trajectory,dir_no), name="target")
-
+    
+    #'''
     ### Encoder
     conv1 = tf.layers.conv2d(inputs=inputs_, filters=64, kernel_size=(3,3), padding='same', activation=tf.nn.relu)
     # Now 128x128x16
@@ -220,106 +218,31 @@ def execute():
     # Get cost and define the optimizer
     cost = tf.reduce_mean(loss)
     opt = tf.train.AdamOptimizer(learning_rate).minimize(cost)
-    
+    #'''
     # Add ops to save and restore all the variables.
     saver = tf.train.Saver()
-
-    #init regressor
-    #regressor = init_dnn()
-
-    direct = image_dir + 'direc.p'
-    ''' To generate new images
-    for i in range(num_images):
-        dirc = generate_images('fig_'+str(i))
-        #print("directions:",i , dirc)
-    
-    #save values
-    data_file = open(direct,"wb")#"a+b")#wb
-    #data_file = open("/home/shar_sc/Documents/DirtDetection/data/trajectory_primitives/direc.p","wb")#"a+b")#wb
-    for data in dir1:    
-        pickle.dump(data, data_file)
-    data_file.close()
-    #'''
-    
-    #To read data
-    objs = []
-    f = open(direct,"rb")
-    #f = open("/home/shar_sc/Documents/DirtDetection/data/trajectory_primitives/direc.p","rb")
-    while 1:
-        try:
-            objs.append(pickle.load(f))
-        except EOFError:
-            break
-    f.close()
-
     sess = tf.Session()
-    epochs = iter1
     sess.run(tf.global_variables_initializer())
-    
+  
     # for testing
     images_test = []
     objs_test = []
-    objs_test_tensor = []
-    step = 0
+    
     #read images
-    for e  in range(epochs):
-        for i in range(num_images):
-            img_direct = image_dir + 'fig_' + str(i) + '.png'
-            img = cv2.imread(img_direct,0)
-            img = cv2.resize(img,dsize=(128,128) , interpolation = cv2.INTER_CUBIC)
-            #cv2.imshow('image',img)
-            #Numpy array
-            np_image_data = np.asarray(img)
-            np_image_data = cv2.normalize(np_image_data.astype('float'), None, -0.5, .5, cv2.NORM_MINMAX)
-            np_final = np.expand_dims(np_image_data,axis=0)
-            np_final = np_final.reshape((128,128,-1))   
-            images_in = []
-            images_in.append(np_final)
-            inp = np.asarray(objs[i])
-            inp = inp.astype(np.int32)#np.float32)#np.int32    
-            #inp = inp.reshape([-1,20])    
+    img_direct = image_dir + 'test.png'
+    img = cv2.imread(img_direct,0)
+    img = cv2.resize(img,dsize=(128,128) , interpolation = cv2.INTER_CUBIC)
+    np_image_data = np.asarray(img)
+    np_image_data = cv2.normalize(np_image_data.astype('float'), None, -0.5, .5, cv2.NORM_MINMAX)
+    np_final = np.expand_dims(np_image_data,axis=0)
+    np_final = np_final.reshape((128,128,-1))   
+    images_in = []
+    images_in.append(np_final)
+
+    saver.restore(sess, s_direct) #("/tmp/model.ckpt")
+    print("Model restored.")
             
-            #inp = tf.one_hot(indices = inp, depth = 4, on_value = 1.0, off_value = 0.0, axis = -1)    
-            inp = inp.reshape(len(inp), 1)
-            onehot_encoder = OneHotEncoder(n_values=dir_no, sparse=False)
-            inp = onehot_encoder.fit_transform(inp)
-            #print inp
-            if len(inp) != points_on_trajectory:
-                print "size of labels not correct:", inp#len(inp)
-                continue
-            if len(inp[0]) != dir_no:
-                print "size of labels not correct:", inp#len(inp)
-                continue                
-            inp = inp.reshape([-1,points_on_trajectory,dir_no])    
-            #print inp
-            if i < 10:
-                if (e == 0):
-                    images_test.append(np_final)
-                    objs_test.append(objs[i])
-                    objs_test_tensor.append(inp)
-            else:        
-                batch_cost, _ = sess.run([cost, opt], feed_dict={inputs_: images_in, targets_: inp})
-                print("Epoch: {}/{}/{}".format(i+1,e+1, epochs), "Training loss: {:.4f}".format(batch_cost))
-                step = step +1
-        save_direct = s_direct + 'cnn_model'
-        save_path = saver.save(sess,save_direct,global_step=step)
-        print("Model saved in file: %s" % save_path)
-            
-        '''            
-        if i < 10:
-            images_test.append(np_final)
-            objs_test.append(objs[i])
-        else:
-            images_in.append(np_final)   
-            objs_in.append(objs[i])
-            if (i+1.)%batch_size==0. :
-                print"i:", i
-                images_in_batch.append(images_in)
-                images_in = []
-                objs_in_batch.append(objs_in)
-                objs_in = []
-        '''        
-    in_imgs = images_test
+    in_imgs = images_in
     reconstructed = sess.run(logits, feed_dict={inputs_: in_imgs})
     reconstructed = np.asarray(reconstructed).reshape([-1,points_on_trajectory,dir_no])
     for res in range(len(reconstructed)):
@@ -328,14 +251,9 @@ def execute():
             max_index = argmax(reconstructed[res][lab, :])
             lab_arr.append(max_index)
         print "argmax index array:" , lab_arr
-        generate_result(str(res), lab_arr)
+        generate_result('test_out', lab_arr)
         print("reconstructed {}: {}".format(str(res),str(reconstructed[res])))
-        generate_result(str(res) + str('_o'),objs_test[res] )
-                
-    #predictions = list(itertools.islice(reconstructed, 1))
-    #predictions = np.asarray(predictions).reshape([20,4]) 
-    #print("Predictions: {}".format(str(len(predictions))))
-    print "labels:", objs_test
+
     sess.close()  
     return
 

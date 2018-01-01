@@ -493,12 +493,29 @@ def evaluate_data_from_file_dnn_poly(regressor, data, name=""):
     #for center frame, including spherical coords, and motor pos at center
     app.idle_cfg["right_arm"] = data[0][4]
     app.rave.set_config_dict(app.idle_cfg)
+    
+    ''' To change start position manually
+    a = app.rave.get_config_dict()
+    for tem in range(len(a["right_arm"])):
+        a["right_arm"][tem] = a["right_arm"][tem] +0.1
+        print "value of a:",a["right_arm"][tem]
+    app.rave.set_config_dict(a)        
+    #'''
+    
     center_frame = app.rave.get_manip_frame("right_arm")
     app.rave.add_coord("goal", center_frame,"small")
     s_coord = cartToSpher(*center_frame[0:3,3])
     #c_coord = [center_frame[0,3], center_frame[1,3], center_frame[2,3]]
     #TODO fix this
-    c_coord = [center_frame[0,3]-0.58, center_frame[1,3]+.29, center_frame[2,3]-0.99]
+    #c_coord = [center_frame[0,3]-0.58, center_frame[1,3]+.29, center_frame[2,3]-0.99]
+    
+    ''' To change start position manually
+    center_frame[0,3] = center_frame[0,3]-1.5
+    center_frame[1,3] = center_frame[1,3]-0.
+    center_frame[2,3] = center_frame[2,3]+0.2        
+    app.rave.set_manip_frame("right_arm") = center_frame
+    #'''    
+    c_coord = [center_frame[0,3], center_frame[1,3], center_frame[2,3]]
     #print "c_coord:",c_coord
     
     q_dict = app.rave.get_config_dict()  
@@ -511,7 +528,7 @@ def evaluate_data_from_file_dnn_poly(regressor, data, name=""):
     
     #what was recorded:
     for data_point in data:
-        app.idle_cfg["right_arm"] = data_point[-1]
+        app.idle_cfg["right_arm"] = data_point[6]#data_point[-1]
         app.rave.set_config_dict(app.idle_cfg)
         expected = app.rave.get_manip_frame("right_arm")
         points_expected.append(expected[0:3,3])
@@ -654,6 +671,437 @@ def evaluate_data_from_file_dnn_poly(regressor, data, name=""):
     return
 
 
+def evaluate_data_demo_accum(regressor, n_point):
+    num_points = n_point
+    
+    ''' To change start position manually
+    a = app.rave.get_config_dict()
+    for tem in range(len(a["right_arm"])):
+        a["right_arm"][tem] = a["right_arm"][tem] +0.1
+        print "value of a:",a["right_arm"][tem]
+    app.rave.set_config_dict(a)        
+    #'''
+    
+    center_frame = app.rave.get_manip_frame("right_arm")
+    app.rave.add_coord("goal", center_frame,"small")
+    s_coord = cartToSpher(*center_frame[0:3,3])
+    #c_coord = [center_frame[0,3]-0.58, center_frame[1,3]+.29, center_frame[2,3]-0.99]
+    
+    ''' To change start position manually
+    center_frame[0,3] = center_frame[0,3]-1.5
+    center_frame[1,3] = center_frame[1,3]-0.
+    center_frame[2,3] = center_frame[2,3]+0.2        
+    app.rave.set_manip_frame("right_arm") = center_frame
+    #'''    
+    c_coord = [center_frame[0,3], center_frame[1,3], center_frame[2,3]]
+    #print "c_coord:",c_coord
+    
+    q_dict = app.rave.get_config_dict()  
+    motor_pos_center = q_dict["right_arm"]
+   
+    total_error = 0.0
+    points = []
+    points_expected = []
+    sum_motor_pos = [0.,0.,0.,0.,0.,0.,0.]
+    
+    sum_d = 0.0
+    sum_theta = 0.0
+    sum_phi = 0.0
+    
+    #result of estimation
+    for i in xrange(num_points):
+        result = []
+        if app.noSpherical:
+            list_x = [c_coord[0]]
+            list_y = [c_coord[1]]
+            list_z = [c_coord[2]]                                
+        else:
+            list_x = [s_coord[0]]
+            list_y = [s_coord[1]]
+            list_z = [s_coord[2]]                        
+        if app.output == 0:
+            d = {'time' : i,
+                 'x' : list_x,
+                 'y' : list_y,
+                 'z' : list_z,
+                 'out_x': 0.0, # dummy values
+                 'out_y': 0.0,
+                 'out_z': 0.0
+                 }         
+        else:             
+            d = {'time' : i,
+                 'x' : list_x,
+                 'y' : list_y,
+                 'z' : list_z,
+                 'out_0': 0.0, # dummy values
+                 'out_1': 0.0,
+                 'out_2': 0.0,
+                 'out_3': 0.0,
+                 'out_4': 0.0,
+                 'out_5': 0.0,
+                 'out_6': 0.0                                                                              
+                 } 
+        input_data = pd.DataFrame(d) 
+        y = regressor.predict(input_fn=lambda: input_fn(input_data))
+        # .predict() returns an iterator; convert to a list and print predictions
+        predictions = list(itertools.islice(y, 1))
+        print("Predictions: {}".format(str(predictions)))
+        if app.output == 0:
+            if app.noSpherical: 
+                #d,theta, phi are now actually x,y,z           
+                sum_d += predictions[0][0]
+                sum_theta += predictions[0][1]
+                sum_phi += predictions[0][2]
+                goal_s_x = c_coord[0] + sum_d
+                goal_s_y = c_coord[1] + sum_theta
+                goal_s_z = c_coord[2] + sum_phi          
+                goal_cart = [goal_s_x, goal_s_y, goal_s_z]
+                #result_cart = cartToSpher(result[0][0],result[0][1],result[0][2])
+                sum_cart = [sum_d, sum_theta, sum_phi]
+                
+                #execute trajectory
+                offset = center_frame 
+                offset[0,3] = goal_cart[0]# + 0.58
+                offset[1,3] = goal_cart[1]# -0.284
+                offset[2,3] = goal_cart[2]# + .99
+                app.rave.add_coord("offset", offset,"small")
+                initial = app.rave.get_config_dict()
+                q_dict = app.find_ik_rotational(offset, i)
+                if q_dict is None:
+                    print "cannot find IK"
+                    continue#return
+                #qd = q_dict["right_arm"] - initial["right_arm"] 
+                #if i > 1 and (any(qd > 0.3) or any(qd < -0.3)): #12deg
+                #    print "re-configuration not allowed"
+                #    return  
+                app.rave.set_config_dict(q_dict)   
+            else:
+                sum_d += predictions[0][0]
+                sum_theta += predictions[0][1]
+                sum_phi += predictions[0][2]
+                goal_s_x = s_coord[0] + sum_d
+                goal_s_y = s_coord[1] + sum_theta
+                goal_s_z = s_coord[2] + sum_phi          
+                goal_cart = spherToCart(goal_s_x, goal_s_y, goal_s_z)
+                #result_cart = cartToSpher(result[0][0],result[0][1],result[0][2])
+                sum_cart = spherToCart(sum_d, sum_theta, sum_phi)
+                
+                #execute trajectory
+                offset = center_frame 
+                offset[0,3] = goal_cart[0]
+                offset[1,3] = goal_cart[1]
+                offset[2,3] = goal_cart[2]
+                app.rave.add_coord("offset", offset,"small")
+                initial = app.rave.get_config_dict()
+                q_dict = app.find_ik_rotational(offset, i)
+                if q_dict is None:
+                    print "cannot find IK"
+                    continue#return
+                #qd = q_dict["right_arm"] - initial["right_arm"] 
+                #if i > 1 and (any(qd > 0.3) or any(qd < -0.3)): #12deg
+                #    print "re-configuration not allowed"
+                #    return  
+                app.rave.set_config_dict(q_dict)   
+        else:
+            # for motor position learned
+            sum_motor_pos[0] += predictions[0][0]#result[0]
+            sum_motor_pos[1] += predictions[0][1]
+            sum_motor_pos[2] += predictions[0][2]
+            sum_motor_pos[3] += predictions[0][3]
+            sum_motor_pos[4] += predictions[0][4]
+            sum_motor_pos[5] += predictions[0][5]
+            sum_motor_pos[6] += predictions[0][6]
+            #print "smp: " ,sum_motor_pos
+            estimated_pos = [0.,0.,0.,0.,0.,0.,0.]
+            estimated_pos = motor_pos_center + sum_motor_pos
+
+            #move robot to estimated pose
+            cdict = app.rave.get_config_dict()
+            cdict["right_arm"] = estimated_pos
+            app.rave.set_config_dict(cdict)
+              
+        #print result
+        reached_frame = app.rave.get_manip_frame("right_arm")
+        points.append(reached_frame[0:3,3])
+        app.rave.draw_line("line", points, [0,0,1], 4)
+        #app.rave.add_coord("circle%d" % (i), reached_frame, "small")  
+        print "reached: ",reached_frame[0:3,3] 
+        #print "expected: ",points_expected[i]
+        #error assumption
+        #error = calc_error(reached_frame[0:3,3], points_expected[i][0], points_expected[i][1], points_expected[i][2])
+        #print "error:", error
+        #total_error += error
+        
+        
+    #print "total_error:", total_error/num_points
+    return
+
+def evaluate_data_demo_broom(regressorL, regressorR, n_point):
+    num_points = n_point
+    
+    ''' To change start position manually
+    a = app.rave.get_config_dict()
+    for tem in range(len(a["right_arm"])):
+        a["right_arm"][tem] = a["right_arm"][tem] +0.1
+        print "value of a:",a["right_arm"][tem]
+    app.rave.set_config_dict(a)        
+    #'''
+    
+    center_frameR = app.rave.get_manip_frame("right_arm")
+    app.rave.add_coord("goalR", center_frameR,"small")
+    s_coordR = cartToSpher(*center_frameR[0:3,3])
+    #c_coord = [center_frame[0,3]-0.58, center_frame[1,3]+.29, center_frame[2,3]-0.99]
+    
+    
+    center_frameL = app.rave.get_manip_frame("left_arm")
+    app.rave.add_coord("goalL", center_frameL,"small")
+    s_coordL = cartToSpher(*center_frameL[0:3,3])
+    
+    ''' To change start position manually
+    center_frame[0,3] = center_frame[0,3]-1.5
+    center_frame[1,3] = center_frame[1,3]-0.
+    center_frame[2,3] = center_frame[2,3]+0.2        
+    app.rave.set_manip_frame("right_arm") = center_frame
+    #'''    
+    c_coordR = [center_frameR[0,3], center_frameR[1,3], center_frameR[2,3]]
+    c_coordL = [center_frameL[0,3], center_frameL[1,3], center_frameL[2,3]]
+    
+    #print "c_coord:",c_coord
+    
+    q_dict = app.rave.get_config_dict()  
+    motor_pos_centerR = q_dict["right_arm"]
+    motor_pos_centerL = q_dict["left_arm"]
+
+
+    total_errorR = 0.0
+    pointsR = []
+    points_expectedR = []
+    sum_motor_posR = [0.,0.,0.,0.,0.,0.,0.]
+    
+    sum_dR = 0.0
+    sum_thetaR = 0.0
+    sum_phiR = 0.0
+    
+    total_errorL = 0.0
+    pointsL = []
+    points_expectedL = []
+    sum_motor_posL = [0.,0.,0.,0.,0.,0.,0.]
+    
+    sum_dL = 0.0
+    sum_thetaL = 0.0
+    sum_phiL = 0.0
+
+    #result of estimation
+    for i in xrange(num_points):
+        resultR = []
+        resultL = []        
+        if app.noSpherical:
+            list_xR = [c_coordR[0]]
+            list_yR = [c_coordR[1]]
+            list_zR = [c_coordR[2]]                                
+            list_xL = [c_coordL[0]]
+            list_yL = [c_coordL[1]]
+            list_zL = [c_coordL[2]]                                
+            
+        else:
+            list_xR = [s_coordR[0]]
+            list_yR = [s_coordR[1]]
+            list_zR = [s_coordR[2]]                        
+            list_xL = [s_coordL[0]]
+            list_yL = [s_coordL[1]]
+            list_zL = [s_coordL[2]]                        
+            
+        if app.output == 0:
+            dR = {'time' : i + 40,
+                 'x' : list_xR,
+                 'y' : list_yR,
+                 'z' : list_zR,
+                 'out_x': 0.0, # dummy values
+                 'out_y': 0.0,
+                 'out_z': 0.0
+                 }         
+            dL = {'time' : i + 40,
+                 'x' : list_xL,
+                 'y' : list_yL,
+                 'z' : list_zL,
+                 'out_x': 0.0, # dummy values
+                 'out_y': 0.0,
+                 'out_z': 0.0
+                 }         
+
+
+        else:             
+            dR = {'time' : i + 40,
+                 'x' : list_xR,
+                 'y' : list_yR,
+                 'z' : list_zR,
+                 'out_0': 0.0, # dummy values
+                 'out_1': 0.0,
+                 'out_2': 0.0,
+                 'out_3': 0.0,
+                 'out_4': 0.0,
+                 'out_5': 0.0,
+                 'out_6': 0.0                                                                              
+                 } 
+                 
+            dL = {'time' : i + 40,
+                 'x' : list_xL,
+                 'y' : list_yL,
+                 'z' : list_zL,
+                 'out_0': 0.0, # dummy values
+                 'out_1': 0.0,
+                 'out_2': 0.0,
+                 'out_3': 0.0,
+                 'out_4': 0.0,
+                 'out_5': 0.0,
+                 'out_6': 0.0                                                                              
+                 }                  
+        input_dataR = pd.DataFrame(dR) 
+        input_dataL = pd.DataFrame(dL) 
+        yR = regressorR.predict(input_fn=lambda: input_fn(input_dataR))
+        yL = regressorL.predict(input_fn=lambda: input_fn(input_dataL))
+        # .predict() returns an iterator; convert to a list and print predictions
+        predictionsR = list(itertools.islice(yR, 1))
+        print("Predictions: {}".format(str(predictionsR)))
+        predictionsL = list(itertools.islice(yL, 1))
+        print("Predictions: {}".format(str(predictionsL)))
+        if app.output == 0:
+            if app.noSpherical: 
+                #d,theta, phi are now actually x,y,z           
+                sum_dR += predictionsR[0][0]
+                sum_thetaR += predictionsR[0][1]
+                sum_phiR += predictionsR[0][2]
+                goal_s_xR = c_coordR[0] + sum_dR
+                goal_s_yR = c_coordR[1] + sum_thetaR
+                goal_s_zR = c_coordR[2] + sum_phiR          
+                goal_cartR = [goal_s_xR, goal_s_yR, goal_s_zR]
+                #result_cart = cartToSpher(result[0][0],result[0][1],result[0][2])
+                sum_cartR = [sum_dR, sum_thetaR, sum_phiR]
+                
+                sum_dL += predictionsL[0][0]
+                sum_thetaL += predictionsL[0][1]
+                sum_phiL += predictionsL[0][2]
+                goal_s_xL = c_coordL[0] + sum_dL
+                goal_s_yL = c_coordL[1] + sum_thetaL
+                goal_s_zL = c_coordL[2] + sum_phiL          
+                goal_cartL = [goal_s_xL, goal_s_yL, goal_s_zL]
+                #result_cart = cartToSpher(result[0][0],result[0][1],result[0][2])
+                sum_cartL = [sum_dL, sum_thetaL, sum_phiL]
+
+
+
+                #execute trajectory
+                offsetR = center_frameR 
+                offsetR[0,3] = goal_cartR[0]# + 0.58
+                offsetR[1,3] = goal_cartR[1]# -0.284
+                offsetR[2,3] = goal_cartR[2]# + .99
+                
+                offsetL = center_frameL 
+                offsetL[0,3] = goal_cartL[0]# + 0.58
+                offsetL[1,3] = goal_cartL[1]# -0.284
+                offsetL[2,3] = goal_cartL[2]# + .99
+
+                app.rave.add_coord("offsetR", offsetR,"small")                
+                app.rave.add_coord("offsetL", offsetL,"small")
+
+                initial = app.rave.get_config_dict()
+                q_dictR = app.find_ik_rotational(offsetR, i)
+                if q_dictR is None:
+                    print "cannot find IK"
+                    continue#return
+
+                q_dictL = app.find_ik_rotational(offsetL, i)
+                if q_dictL is None:
+                    print "cannot find IK"
+                    continue#return
+
+
+                #qd = q_dict["right_arm"] - initial["right_arm"] 
+                #if i > 1 and (any(qd > 0.3) or any(qd < -0.3)): #12deg
+                #    print "re-configuration not allowed"
+                #    return  
+                #TODO fix this it should be combined value of qdictR and qdictL , solution is in the 5-10 lines above from where this library method is called
+                app.rave.set_config_dict(q_dict)   
+            else:
+                #TODO not fixed this section for two arms
+                sum_d += predictions[0][0]
+                sum_theta += predictions[0][1]
+                sum_phi += predictions[0][2]
+                goal_s_x = s_coord[0] + sum_d
+                goal_s_y = s_coord[1] + sum_theta
+                goal_s_z = s_coord[2] + sum_phi          
+                goal_cart = spherToCart(goal_s_x, goal_s_y, goal_s_z)
+                #result_cart = cartToSpher(result[0][0],result[0][1],result[0][2])
+                sum_cart = spherToCart(sum_d, sum_theta, sum_phi)
+                
+                #execute trajectory
+                offset = center_frame 
+                offset[0,3] = goal_cart[0]
+                offset[1,3] = goal_cart[1]
+                offset[2,3] = goal_cart[2]
+                app.rave.add_coord("offset", offset,"small")
+                initial = app.rave.get_config_dict()
+                q_dict = app.find_ik_rotational(offset, i)
+                if q_dict is None:
+                    print "cannot find IK"
+                    continue#return
+                #qd = q_dict["right_arm"] - initial["right_arm"] 
+                #if i > 1 and (any(qd > 0.3) or any(qd < -0.3)): #12deg
+                #    print "re-configuration not allowed"
+                #    return  
+                app.rave.set_config_dict(q_dict)   
+        else:
+            # for motor position learned
+            sum_motor_posR[0] += predictionsR[0][0]#result[0]
+            sum_motor_posR[1] += predictionsR[0][1]
+            sum_motor_posR[2] += predictionsR[0][2]
+            sum_motor_posR[3] += predictionsR[0][3]
+            sum_motor_posR[4] += predictionsR[0][4]
+            sum_motor_posR[5] += predictionsR[0][5]
+            sum_motor_posR[6] += predictionsR[0][6]
+            #print "smp: " ,sum_motor_pos
+            estimated_posR = [0.,0.,0.,0.,0.,0.,0.]
+            estimated_posR = motor_pos_centerR + sum_motor_posR
+
+            sum_motor_posL[0] += predictionsL[0][0]#result[0]
+            sum_motor_posL[1] += predictionsL[0][1]
+            sum_motor_posL[2] += predictionsL[0][2]
+            sum_motor_posL[3] += predictionsL[0][3]
+            sum_motor_posL[4] += predictionsL[0][4]
+            sum_motor_posL[5] += predictionsL[0][5]
+            sum_motor_posL[6] += predictionsL[0][6]
+            #print "smp: " ,sum_motor_pos
+            estimated_posL = [0.,0.,0.,0.,0.,0.,0.]
+            estimated_posL = motor_pos_centerL + sum_motor_posL
+
+
+            #move robot to estimated pose
+            cdict = app.rave.get_config_dict()
+            cdict["right_arm"] = estimated_posR
+            cdict["left_arm"] = estimated_posL
+            app.rave.set_config_dict(cdict)
+              
+        #print result
+        reached_frameR = app.rave.get_manip_frame("right_arm")
+        reached_frameL = app.rave.get_manip_frame("left_arm")        
+        pointsR.append(reached_frameR[0:3,3])
+        app.rave.draw_line("lineR", pointsR, [0,0,1], 4)
+        pointsL.append(reached_frameL[0:3,3])
+        app.rave.draw_line("lineL", pointsL, [0,0,1], 4)
+        #app.rave.add_coord("circle%d" % (i), reached_frame, "small")  
+        print "reachedR: ",reached_frameR[0:3,3] 
+        print "reachedL: ",reached_frameL[0:3,3] 
+        #print "expected: ",points_expected[i]
+        #error assumption
+        #error = calc_error(reached_frame[0:3,3], points_expected[i][0], points_expected[i][1], points_expected[i][2])
+        #print "error:", error
+        #total_error += error
+        
+        
+    #print "total_error:", total_error/num_points
+    return
+
+
 def init(self):
     app.find_ik_analytically = find_ik_analytically
     app.find_ik_numerically = find_ik_numerically
@@ -664,8 +1112,10 @@ def init(self):
     app.evaluate_data_from_file_dnn = evaluate_data_from_file_dnn
     app.evaluate_data_from_file_dnn_poly = evaluate_data_from_file_dnn_poly
     app.evaluate_data_from_file_hand = evaluate_data_from_file_hand
+    app.evaluate_data_demo_broom = evaluate_data_demo_broom
     app.spherToCart = spherToCart
     app.cartToSpher = cartToSpher
+    app.evaluate_data_demo_accum = evaluate_data_demo_accum
 def execute(self):
     print "execute of %s called!" % self.name
     

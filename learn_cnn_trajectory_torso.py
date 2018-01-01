@@ -1,15 +1,12 @@
-# {'exits': ['out'],
+# {'exits': [],
 #  'item_type': 'script_item',
 #  'parameters': [],
-#  'position': (660, 90, -1, -1),
-#  'transitions': [('out', 'dummy4')]}
+#  'position': (10, 540, -1, -1),
+#  'transitions': []}
 ### end of header
-# this has input : the vector to goal point only, added regularization, loss function .assign(not now) 
-
 import time
 import math
 import random
-from random import uniform
 import cPickle as pickle
 import numpy as np
 from pyutils.matrix import *
@@ -17,13 +14,19 @@ import itertools
 import pandas as pd
 import tensorflow as tf
 from tensorflow.contrib.learn.python.learn.estimators import model_fn as model_fn_lib
-
+from odb_interface import odb_utils
+   
 def init(self):
     
+    app.num_points = 10      #10 # points on circle
+    app.skip = 0
+    app.iterations = 3#25#112      # trajectories to be generated
+    app.points = []
+
     app.initial_run = True
     # steps to partially train secondary network
     app.num_steps = 100
-    #app.cost = 0.0 # a big value for beginning now in init.py file
+    app.cost = 0.0 # a big value for beginning
     app.sum_error = 0.0
     app.sum_error_sec = 0.0
     app.repetitions = 0
@@ -34,39 +37,33 @@ def init(self):
     app.noSpherical = True
     app.simple = True # simple version with less features
     
-    app.steps_1= 1
-    app.model_path_1 = "/home_local/shar_sc/learn_motion_models_temp5" #2" # temp1 #wipe1"
-    app.steps_2= 1
-    app.model_path_2 = "/home_local/shar_sc/learn_motion_models_secondary_cart_motorpos_10" 
-    
-    
     app.FEATURES = ["time", "x", "y", "z"]
-    app.COLUMNS = ["time", "x", "y", "z","out_0","out_1","out_2","out_3","out_4","out_5","out_6"]        
-    app.LABEL = ["out_0","out_1","out_2","out_3","out_4","out_5","out_6"]
+    app.COLUMNS = ["time", "x", "y", "z","out_0","out_1","out_2","out_3","out_4","out_5","out_6","out_7","out_8","out_9"]        
+    app.LABEL = ["out_0","out_1","out_2","out_3","out_4","out_5","out_6","out_7","out_8","out_9"]
     if app.output == 0:    
         app.COLUMNS = ["time", "x", "y", "z","out_x", "out_y", "out_z"]
         app.LABEL = ["out_x","out_y","out_z"]
 
     # for secondary learner
     if app.simple == True:
-        app.FEATURES_sec = ["time", "x", "y", "z","e_x","e_y","e_z","ep_x","ep_y","ep_z","np_x","np_y","np_z"]
-        app.COLUMNS_sec = ["time", "x", "y", "z", "np_x","np_y","np_z", "out_0","out_1","out_2","out_3","out_4","out_5","out_6"]        
-        app.LABEL_sec = ["out_0","out_1","out_2","out_3","out_4","out_5","out_6"]
+        app.FEATURES_sec = ["time", "x", "y", "z","e_x","e_y","e_z"]
+        app.COLUMNS_sec = ["time", "x", "y", "z", "e_x","e_y","e_z", "out_0","out_1","out_2","out_3","out_4","out_5","out_6","out_7","out_8","out_9"]        
+        app.LABEL_sec = ["out_0","out_1","out_2","out_3","out_4","out_5","out_6","out_7","out_8","out_9"]
         if app.output == 0:    
-            app.FEATURES_sec = ["time", "x", "y", "z","np_x","np_y","np_z"]
-            app.COLUMNS_sec = ["time", "x", "y", "z","np_x","np_y","np_z", "out_x", "out_y", "out_z"]
+            app.FEATURES_sec = ["time", "x", "y", "z","e_x","e_y","e_z"]
+            app.COLUMNS_sec = ["time", "x", "y", "z","e_x","e_y","e_z", "out_x", "out_y", "out_z"]
             app.LABEL_sec = ["out_x","out_y","out_z"]        
     else: 
-        app.FEATURES_sec = ["time", "x", "y", "z","r1","r2","r3","p0","p1","p2","p3","p4","p5","p6","e_x","e_y","e_z","ep_x","ep_y","ep_z","np_x","np_y","np_z"]
-        app.COLUMNS_sec = ["time", "x", "y", "z","r1","r2","r3","p0","p1","p2","p3","p4","p5","p6", "e_x","e_y","e_z","ep_x","ep_y","ep_z","np_x","np_y","np_z", "out_0","out_1","out_2","out_3","out_4","out_5","out_6"]        
-        app.LABEL_sec = ["out_0","out_1","out_2","out_3","out_4","out_5","out_6"]
+        app.FEATURES_sec = ["time", "x", "y", "z","r1","r2","r3","p0","p1","p2","p3","p4","p5","p6","p7","p8","p9","e_x","e_y","e_z"]
+        app.COLUMNS_sec = ["time", "x", "y", "z","r1","r2","r3","p0","p1","p2","p3","p4","p5","p6","p7","p8","p9", "e_x","e_y","e_z", "out_0","out_1","out_2","out_3","out_4","out_5","out_6","out_7","out_8","out_9"]        
+        app.LABEL_sec = ["out_0","out_1","out_2","out_3","out_4","out_5","out_6","out_7","out_8","out_9"]
         if app.output == 0:    
-            app.FEATURES_sec = ["time", "x", "y", "z","r1","r2","r3","p0","p1","p2","e_x","e_y","e_z","ep_x","ep_y","ep_z","np_x","np_y","np_z"]
-            app.COLUMNS_sec = ["time", "x", "y", "z","r1","r2","r3","p0","p1","p2", "e_x","e_y","e_z","ep_x","ep_y","ep_z","np_x","np_y","np_z", "out_x", "out_y", "out_z"]
+            app.FEATURES_sec = ["time", "x", "y", "z","r1","r2","r3","p0","p1","p2","e_x","e_y","e_z"]
+            app.COLUMNS_sec = ["time", "x", "y", "z","r1","r2","r3","p0","p1","p2", "e_x","e_y","e_z", "out_x", "out_y", "out_z"]
             app.LABEL_sec = ["out_x","out_y","out_z"]        
         
     tf.logging.set_verbosity(tf.logging.INFO)
-    app.LEARNING_RATE = 0.000001# .001 default
+    app.LEARNING_RATE = 0.001# .001 default
     pass
 
 def execute(self):
@@ -103,7 +100,7 @@ def train_dnn(training_set):
     if app.output == 0:
         app.dim = 3
     else:
-        app.dim = 7 
+        app.dim = 10  
     # Build 2 layer fully connected DNN with 10, 10 units respectively.
     regressor = tf.contrib.learn.DNNRegressor(feature_columns=feature_cols,
                                             hidden_units=[1024, 512, 256,256,256,256,256,256,256,256,256,256,256,256,256,256,256,256,256,256,256,256,256,256,256,256,256,256,256],#256,256,256,256,256,256,256,256,256,256,256,256,256],
@@ -119,7 +116,7 @@ def train_dnn(training_set):
                                             #model_dir="/home_local/shar_sc/learn_motion_models_small_cart_motorpos"
                                             
                                             #for motor pos circle for cart coord
-                                            model_dir=app.model_path_1
+                                            model_dir="/home_local/shar_sc/learn_motion_cnn_trajectory2"
                                             
                                             # for motor pos circle works fine for spherical coordinate
                                             #model_dir="/home_local/shar_sc/learn_motion_models_temp",
@@ -130,19 +127,17 @@ def train_dnn(training_set):
                                             )
 
     # Fit
-    regressor.fit(input_fn=lambda: input_fn(training_set), steps=app.steps_1)#20000)
+    regressor.fit(input_fn=lambda: input_fn(training_set), steps=1)
     return regressor
 
 def model_fn(features, targets, mode, params):
     if app.output == 0:
         app.dim = 3
     else:
-        app.dim = 7 
+        app.dim = 10  
     """Model function for Estimator."""
     # Connect the first hidden layer to input layer
     # (features) with relu activation    
-    
-    '''
     first_hidden_layer = tf.contrib.layers.relu(features, 100)
     # Connect the second hidden layer to first hidden layer with relu
     second_hidden_layer = tf.contrib.layers.relu(first_hidden_layer, 100)
@@ -151,39 +146,13 @@ def model_fn(features, targets, mode, params):
     fv_hidden_layer = tf.contrib.layers.relu(f_hidden_layer, 50)
     # Connect the output layer to second hidden layer (no activation fn)
     output_layer = tf.contrib.layers.linear(fv_hidden_layer, app.dim)
-    
-    '''
-    
-    first_hidden_layer = tf.contrib.layers.relu(features, 1024)
-    # Connect the second hidden layer to first hidden layer with relu
-    '''
-    second_hidden_layer = tf.contrib.layers.relu(first_hidden_layer, 512)
-    
-    t_hidden_layer = tf.contrib.layers.relu(second_hidden_layer, 256)
-    f_hidden_layer = tf.contrib.layers.relu(t_hidden_layer, 256)
-    fv_hidden_layer = tf.contrib.layers.relu(f_hidden_layer, 256)
-    
-    s_hidden_layer = tf.contrib.layers.relu(fv_hidden_layer, 256)
-    sv_hidden_layer = tf.contrib.layers.relu(s_hidden_layer, 256)
-    e_hidden_layer = tf.contrib.layers.relu(sv_hidden_layer, 256)
-    n_hidden_layer = tf.contrib.layers.relu(e_hidden_layer, 256)
-    tn_hidden_layer = tf.contrib.layers.relu(n_hidden_layer, 256)
-    '''
-    tn_hidden_layer = tf.contrib.layers.relu(first_hidden_layer, 256)
-    
-                        
-    # Connect the output layer to second hidden layer (no activation fn)
-    output_layer = tf.contrib.layers.linear(tn_hidden_layer, app.dim)
-    
     # Reshape output layer to 1-dim Tensor to return predictions
     #predictions = tf.reshape(output_layer, [-1])
     #predictions_dict = {"pred": predictions}
 
     # Calculate loss using mean squared error
-    loss = tf.Variable(app.cost, name="loss_variable", dtype=tf.float64) # tf.losses.mean_squared_error(targets, predictions)
-    #loss_t = tf.Variable(app.cost, name="loss_variable", dtype=tf.float64) # tf.losses.mean_squared_error(targets, predictions)
-    #loss = tf.losses.add_loss(loss_t)
-
+    loss = tf.Variable(app.cost, name="loss", dtype=tf.float64) # tf.losses.mean_squared_error(targets, predictions)
+    
     '''
     # Calculate root mean squared error as additional eval metric
     eval_metric_ops = {
@@ -203,7 +172,7 @@ def model_fn(features, targets, mode, params):
         loss=loss,
         train_op=train_op)#, eval_metric_ops=eval_metric_ops)
 
-
+'''
 def create_dnn_secondary(training_set, cost):     
     print "Training Regressor:"
     # Feature cols
@@ -213,7 +182,7 @@ def create_dnn_secondary(training_set, cost):
     if app.output == 0:
         app.dim = 3
     else:
-        app.dim = 7 
+        app.dim = 10  
     
     optmzr = tf.train.GradientDescentOptimizer(learning_rate=0.001)
     opt_op = optmzr.minimize(cost)
@@ -245,18 +214,17 @@ def create_dnn_secondary(training_set, cost):
                                             )
     # Fit                                            
     #regressor_s.partial_fit(input_fn=lambda: input_fn_sec(training_set), steps=app.num_steps)
-    #regressor_s.partial_fit(input_fn=lambda: input_fn(training_set), steps=app.num_steps)
-    regressor_s.fit(input_fn=lambda: input_fn(training_set), steps=app.num_steps)
+    regressor_s.partial_fit(input_fn=lambda: input_fn(training_set), steps=app.num_steps)
     return regressor_s
+'''
     
 def partial_fit_regressor(regressor_s, data, num_steps):
     # Fit
-    regressor_s.fit(input_fn=lambda: input_fn(data), steps=num_steps)
-    #regressor_s.partial_fit(input_fn=lambda: input_fn(data), steps=num_steps)
+    regressor_s.partial_fit(input_fn=lambda: input_fn(data), steps=num_steps)
     #regressor_s.partial_fit(input_fn=lambda: input_fn_sec(data), steps=num_steps)
     return regressor_s
 
-def process_data(file_name,output=0):
+def process_data(file_name,output=0, shape_num=0):
     data_final_pos_x = []
     data_final_pos_y = []
     data_final_pos_z = []    
@@ -269,7 +237,7 @@ def process_data(file_name,output=0):
         while 1:
             try:
                 line = pickle.load(f)
-                time.append(line[0])
+                time.append(line[0] + shape_num*app.num_points)
                 if app.noSpherical:
                     list_x.append(line[7][0])
                     list_y.append(line[7][1])
@@ -313,7 +281,7 @@ def process_data(file_name,output=0):
         while 1:
             try:
                 line = pickle.load(f)
-                time.append(line[0])
+                time.append(line[0] + shape_num*app.num_points)
                 if app.noSpherical:
                     #'''
                     list_x.append(line[7][0])
@@ -330,12 +298,10 @@ def process_data(file_name,output=0):
                 data_motor_pos_3.append(line[5][3])
                 data_motor_pos_4.append(line[5][4])
                 data_motor_pos_5.append(line[5][5])
-                data_motor_pos_6.append(line[5][6])  
-                '''                                                                              
+                data_motor_pos_6.append(line[5][6])                                                                                
                 data_torso_1.append(line[11][0])                                                                                                
                 data_torso_2.append(line[11][1])                                                                                                
-                data_torso_3.append(line[11][2]) 
-                '''                                                                                                                               
+                data_torso_3.append(line[11][2])                                                                                                                                
             except EOFError:
                 break
         f.close()
@@ -349,7 +315,10 @@ def process_data(file_name,output=0):
              'out_3': data_motor_pos_3,
              'out_4': data_motor_pos_4,
              'out_5': data_motor_pos_5,
-             'out_6': data_motor_pos_6
+             'out_6': data_motor_pos_6,
+             'out_7': data_torso_1,
+             'out_8': data_torso_2,
+             'out_9': data_torso_3                                                                                                                                                            
              } 
         return pd.DataFrame(d)
     
@@ -366,13 +335,24 @@ def input_fn_sec(data_set):
 def learnMotion():
     tf.logging.set_verbosity(tf.logging.INFO)   
     #generate trajectory
-    num_points = 10      #10 # points on circle
-    skip = 0
-    iterations = 8000#112      # trajectories to be generated
-
+    
     #train
-    training_set = process_data("/home/shar_sc/Documents/DirtDetection/data/motion/data2_1900_10.p",app.output)#data_rec2.p",app.output)#data2_8000_10.p",app.output)
-    regressor = train_dnn(training_set) 
+    for rept in range(1):
+        training_set = process_data("/home/shar_sc/Documents/DirtDetection/data/motion/data_rec_cnn.p",app.output,0)
+        regressor = train_dnn(training_set)
+        '''
+        training_set = process_data("/home/shar_sc/Documents/DirtDetection/data/motion/data_rec_s90.p",app.output,0)
+        regressor = train_dnn(training_set) 
+        training_set = process_data("/home/shar_sc/Documents/DirtDetection/data/motion/data_rec_s0.p",app.output,1)
+        regressor = train_dnn(training_set) 
+        training_set = process_data("/home/shar_sc/Documents/DirtDetection/data/motion/data_rec_s45.p",app.output,2)
+        regressor = train_dnn(training_set) 
+        training_set = process_data("/home/shar_sc/Documents/DirtDetection/data/motion/data_rec_s135.p",app.output,3)
+        regressor = train_dnn(training_set) 
+        training_set = process_data("/home/shar_sc/Documents/DirtDetection/data/motion/data_rec_s180.p",app.output,4)
+        regressor = train_dnn(training_set)
+        '''
+    #'''
     
     ''' To test and evaluate dnn without executing trajectory
     test_set_list = process_data("/home/shar_sc/Documents/DirtDetection/data/motion/data_88_20_20.p",app.output)
@@ -398,31 +378,46 @@ def learnMotion():
         'left_hand': array([0, 0.6, 0.6]*4), 
         'left_arm': array([-1.0, -1.5, -0.2909,  1.1,  0.    ,  -0.0    , -0.0])
     }
-    app.rave.set_config_dict(app.idle_cfg)
+    #app.rave.set_config_dict(app.idle_cfg)
     app.rave.remove_coords("*")
     
     #q_dict = app.rave.get_config_dict()    
     t = app.rave.get_manip_frame("right_arm")
     data = []
-    f = open("/home/shar_sc/Documents/DirtDetection/data/motion/data2_12900_10.p","rb")#data_rec2.p","rb")    
+    f = open("/home/shar_sc/Documents/DirtDetection/data/motion/data_rec_cnn.p","rb")    
     while True:
         try:
             data.append(pickle.load(f))
         except EOFError:
             break
-
-    for i in range(iterations+skip):
-        if(i < skip):
+            
+    app.cnn_pred = [2, 2, 4, 4, 3, 3, 2]#<-- for s shape #[1, 2, 0, 3, 4, 3, 2]#<-- for dirt cleaninf demo # [1, 2, 3, 4, 0, 1, 2,3,4]#[2,2,2,2,2,3,3,3,3,3]#
+    for i1 in range(len(app.cnn_pred)):
+        #app.rave.clear_graphic_handles("*")
+        print "dnn predicted iteration:",i1+1
+        skip_point_data = 60#300#90#90#100#180 #70
+        start = skip_point_data
+        end = app.num_points + skip_point_data
+        trial = data[start:end]   
+        print len(trial), start, end 
+        evaluate_data(regressor, trial, i1, app.cnn_pred[i1])    
+        sleep(0.1)
+    
+    '''
+    for i in range(app.iterations+app.skip):
+        if(i < app.skip):
             print "skipping ",i,"th data for replay"
         else:
             app.rave.clear_graphic_handles("*")
             print "dnn prerecorded iteration:",i+1
-            start = (i*num_points)+i
-            end = (i*num_points+num_points)+i+1
+            start = (i*app.num_points)+i
+            end = (i*app.num_points+app.num_points)+i+1
             trial = data[start:end]   
             print len(trial), start, end 
-            evaluate_data_from_file_dnn_poly(regressor, trial, i)    
+            evaluate_data_from_file_dnn_poly(regressor, trial, i, 0)    
             sleep(0.1)
+    '''        
+            
     if (app.repetitions!=0):
         err = app.sum_error/app.repetitions
         print "average error over all iterations:", err, app.repetitions
@@ -437,18 +432,52 @@ def calc_error(g_cart, x,y,z):
     #print "errorx:", g_cart[0] - x , "errory:", g_cart[1] - y , "errorz:", g_cart[2] - z
     return error 
         
-def evaluate_data_from_file_dnn_poly(regressor, data, name=""):
+def evaluate_data(regressor, data, name, shape_num):
     num_points = len(data)
         
     #for center frame, including spherical coords, and motor pos at center
-    app.idle_cfg["right_arm"] = data[0][4]
-    #app.idle_cfg["torso"] = data[0][10]
-    app.rave.set_config_dict(app.idle_cfg)
+    if(int(name)==0):
+        #''' start from recorded data
+        app.idle_cfg["right_arm"] = data[5][4]
+        app.idle_cfg["torso"] = data[5][10]
+        app.rave.set_config_dict(app.idle_cfg)
+        #'''
+        ''' start from dust corner
+        x_pmin = min(app.particles[0])
+        y_pmax = min(app.particles[1])
+        margin = 0.0#9#TODO
+        
+        x_part = x_pmin + margin  #app.particles[0][app.boundary_points.vertices[pt]] -margin_top #app.particles[0][app.boundary_points.simplices[pt][0]]
+        y_part = y_pmax # + margin #app.particles[1][app.boundary_points.vertices[pt]] #app.particles[1][app.boundary_points.simplices[pt][1]]
+        z_part = 0.075 #TODO 
+        
+        roi_frame = odb_utils.float16_to_array(app.wsr.object_store["tray"]["toolframe"])
+        #of_frame = dot(dot(app.rave.get_frame("tray"), roi_frame),txyz(x_part,y_part,z_part))
+        of_frame = dot(dot(app.rave.get_frame("tray"), roi_frame), dot(txyz(x_part,y_part,z_part), rotz(pi)) )
+        hand_frame = dot(of_frame, app.grasp_frame)               
+        app.rave.add_coord("ofse", of_frame,"small")
+        #app.rave.add_coord("hand", hand_frame)
+        
+        #initial = app.rave.get_config_dict()
+        #q_dict_3 = app.find_rotational_ik(hand_frame, 1)
+        #armconfig = app.rave.find_rotational_ik("right_arm", app.grasp_frame, of_frame, [0, 0, 1], 0, 360, 10, best=True, check_env_collisions=False)
+        armconfig = app.rave.find_rotational_ik("right_arm", app.grasp_frame, of_frame, [0, 0, 1], 0, 360, 10, best=True, check_env_collisions=False)
+        q_dict_3 = app.rave.get_config_dict()
+        q_dict_3["right_arm"] = armconfig        
+
+        if q_dict_3 is None:
+            print "cannot find IK"
+            return       
+        app.rave.set_config_dict(q_dict_3)               
+        #'''
+
+
+    
     center_frame = app.rave.get_manip_frame("right_arm")
     app.rave.add_coord("goal", center_frame,"small")
     s_coord = cartToSpher(*center_frame[0:3,3])
-    #c_coord = [center_frame[0,3], center_frame[1,3], center_frame[2,3]]
-    c_coord = [center_frame[0,3]-0.58, center_frame[1,3]+.29, center_frame[2,3]-0.99]
+    c_coord = [center_frame[0,3], center_frame[1,3], center_frame[2,3]]
+    #c_coord = [center_frame[0,3]-0.58, center_frame[1,3]+.29, center_frame[2,3]-0.99]
     #print "c_coord:",c_coord
     
     q_dict = app.rave.get_config_dict()  
@@ -457,7 +486,7 @@ def evaluate_data_from_file_dnn_poly(regressor, data, name=""):
     
     total_error = 0.0
     total_error_sec = 0.0    
-    points = []
+    
     points_sec = []
     points_expected = []
     points_failure = []
@@ -466,18 +495,19 @@ def evaluate_data_from_file_dnn_poly(regressor, data, name=""):
     sum_torso = [0.,0.,0.]
     sum_torso_sec = [0.,0.,0.]
     sum_motor_failure = []    
-       
+     
+    '''   
     #what was recorded:
-    for data_point in data[0:-1]: #TODO
+    for data_point in data[0:-1]:
         app.idle_cfg["right_arm"] = data_point[6]#[-1][6]#  data_point[-1]
-        #app.idle_cfg["torso"] = data_point[12]
+        app.idle_cfg["torso"] = data_point[12]
         app.rave.set_config_dict(app.idle_cfg)
         expected = app.rave.get_manip_frame("right_arm")
         points_expected.append(expected[0:3,3])
         #app.rave.add_coord("expected%d" % (i), expected, "small")  
         app.rave.draw_line("line_expected%s" % name, points_expected, [0,1,0], 4)
-        
-        '''
+    '''    
+    '''
         #introduce error
         failure = app.rave.get_manip_frame("right_arm")
         failure = dot(txyz(0, 0, 0.1), failure)
@@ -487,18 +517,16 @@ def evaluate_data_from_file_dnn_poly(regressor, data, name=""):
         points_failure.append(failure[0:3,3]) 
         app.rave.draw_line("line_failure%s" % name, points_failure, [1,0,0], 4)
         #sleep(0.5)
-        '''
-    #TODO     
+    '''
+    '''    
     points_expected.append(points_expected[0])
-
+    '''
     sum_d = 0.0
     sum_theta = 0.0
     sum_phi = 0.0
     
-    error_sec_old = [0.,0.,0.]
-    next_point = [0.,0.,0.]
     #result of estimation
-    for i in xrange(num_points):
+    for i in xrange(app.num_points):
         result = []
         list_x = []
         list_y = []
@@ -512,7 +540,7 @@ def evaluate_data_from_file_dnn_poly(regressor, data, name=""):
             list_y = [s_coord[1]]
             list_z = [s_coord[2]]                        
         if app.output == 0:
-            d = {'time' : i,
+            d = {'time' : i + shape_num*app.num_points*2,
                  'x' : list_x,
                  'y' : list_y,
                  'z' : list_z,
@@ -521,7 +549,7 @@ def evaluate_data_from_file_dnn_poly(regressor, data, name=""):
                  'out_z': 0.0
                  }         
         else:             
-            d = {'time' : i,
+            d = {'time' : i + shape_num*app.num_points*2,
                  'x' : list_x,
                  'y' : list_y,
                  'z' : list_z,
@@ -531,7 +559,10 @@ def evaluate_data_from_file_dnn_poly(regressor, data, name=""):
                  'out_3': 0.0,
                  'out_4': 0.0,
                  'out_5': 0.0,
-                 'out_6': 0.0                                                                                              
+                 'out_6': 0.0,          
+                 'out_7': 0.0,
+                 'out_8': 0.0,
+                 'out_9': 0.0                                                                                               
                  }
         input_data = pd.DataFrame(d) 
         y = regressor.predict(input_fn=lambda: input_fn(input_data))
@@ -604,7 +635,6 @@ def evaluate_data_from_file_dnn_poly(regressor, data, name=""):
             sum_motor_pos[4] += predictions[0][4] #- 0.4
             sum_motor_pos[5] += predictions[0][5] #- 0.4
             sum_motor_pos[6] += predictions[0][6] #- 0.4
-            '''
             sum_torso[0]     += predictions[0][7]
             sum_torso[1]     += predictions[0][8]
             sum_torso[2]     += predictions[0][9]
@@ -616,29 +646,36 @@ def evaluate_data_from_file_dnn_poly(regressor, data, name=""):
                         
             #print "smp: " ,sum_motor_pos
             estimated_pos = [0.,0.,0.,0.,0.,0.,0.]
-            #estimated_pos_torso = [0.,0.,0.]
+            estimated_pos_torso = [0.,0.,0.]
             estimated_pos = motor_pos_center + sum_motor_pos
-            #estimated_pos_torso = torso_center + sum_torso
+            estimated_pos_torso = torso_center + sum_torso
             
             #move robot to estimated pose
             cdict = app.rave.get_config_dict()
             cdict["right_arm"] = estimated_pos
-            #cdict["torso"] = estimated_pos_torso
+            cdict["torso"] = estimated_pos_torso
             app.rave.set_config_dict(cdict)
               
         #print result
         reached_frame = app.rave.get_manip_frame("right_arm")
-        points.append(reached_frame[0:3,3])
-        app.rave.draw_line("line", points, [0,0,1], 4)
+        app.points.append(reached_frame[0:3,3])
+        app.rave.draw_line("line", app.points, [0,0,1], 4)
         #app.rave.add_coord("circle%d" % (i), reached_frame, "small")  
         print "reached: ",reached_frame[0:3,3] 
+        
+        #TODO this prevents from executing second net
+        continue
+        
+        
+        
         print "expected: ",points_expected[i]
-        print "points_expected[i]", len(points_expected)
-        #error assumption
+        #error assumpotion
         error = calc_error(reached_frame[0:3,3], points_expected[i][0], points_expected[i][1], points_expected[i][2])
         print "error:", error
-        #to skip second net
-        #continue
+        
+        
+        
+        
         
         #data for other network
         e_x = reached_frame[0:3,3][0] - points_expected[i][0]
@@ -661,9 +698,9 @@ def evaluate_data_from_file_dnn_poly(regressor, data, name=""):
                      'x' : list_x1,
                      'y' : list_y1,
                      'z' : list_z1,
-                     'np_x' : next_point[0],       # vector to next point to reach
-                     'np_y' : next_point[1],
-                     'np_z' : next_point[2],
+                     'e_x' : e_x,       # errors from current predictions
+                     'e_y' : e_y,
+                     'e_z' : e_z,
                      'out_x': 0.0, # no values
                      'out_y': 0.0,
                      'out_z': 0.0
@@ -682,12 +719,6 @@ def evaluate_data_from_file_dnn_poly(regressor, data, name=""):
                      'e_x' : e_x,       # errors from current predictions
                      'e_y' : e_y,
                      'e_z' : e_z,
-                     'ep_x' : error_sec_old[0],       # errors from previous predictions
-                     'ep_y' : error_sec_old[1],
-                     'ep_z' : error_sec_old[2],                     
-                     'np_x' : next_point[0],       # vector to next point to reach
-                     'np_y' : next_point[1],
-                     'np_z' : next_point[2],
                      'out_x': 0.0, # no values
                      'out_y': 0.0,
                      'out_z': 0.0
@@ -701,16 +732,19 @@ def evaluate_data_from_file_dnn_poly(regressor, data, name=""):
                      'x' : list_x1,
                      'y' : list_y1,
                      'z' : list_z1,
-                     'np_x' : next_point[0],       # vector to next point to reach
-                     'np_y' : next_point[1],
-                     'np_z' : next_point[2],                     
+                     'e_x' : e_x,      # errors from current predictions
+                     'e_y' : e_y,
+                     'e_z' : e_z,
                      'out_0': 0.0, # no values
                      'out_1': 0.0,
                      'out_2': 0.0,
                      'out_3': 0.0,
                      'out_4': 0.0,
                      'out_5': 0.0,
-                     'out_6': 0.0
+                     'out_6': 0.0,
+                     'out_7': 0.0,
+                     'out_8': 0.0,
+                     'out_9': 0.0                                                                                                                                
                      }
             else:
                 d_sec = {'time' : i,        # time and center of trajectory
@@ -727,27 +761,22 @@ def evaluate_data_from_file_dnn_poly(regressor, data, name=""):
                      'p4' : predictions[0][4],
                      'p5' : predictions[0][5],
                      'p6' : predictions[0][6],
-                     '''
                      'p7' : predictions[0][7],
                      'p8' : predictions[0][8],
                      'p9' : predictions[0][9],                                                   
-                     '''
                      'e_x' : e_x,      # errors from current predictions
                      'e_y' : e_y,
                      'e_z' : e_z,
-                     'ep_x' : error_sec_old[0],       # errors from previous predictions
-                     'ep_y' : error_sec_old[1],
-                     'ep_z' : error_sec_old[2], 
-                     'np_x' : next_point[0],       # vector to next point to reach
-                     'np_y' : next_point[1],
-                     'np_z' : next_point[2],                                         
                      'out_0': 0.0, # no values
                      'out_1': 0.0,
                      'out_2': 0.0,
                      'out_3': 0.0 ,
                      'out_4': 0.0,
                      'out_5': 0.0,
-                     'out_6': 0.0
+                     'out_6': 0.0,
+                     'out_7': 0.0,
+                     'out_8': 0.0,
+                     'out_9': 0.0                                                                                                                                
                      }
                                  
             #x_sec = tf.constant([ [ i,list_x1[0],list_y1[0],list_z1[0],reached_frame[0:3,3][0],reached_frame[0:3,3][1],reached_frame[0:3,3][2],predictions[0][0],predictions[0][1],predictions[0][2],predictions[0][3],predictions[0][4],predictions[0][5],predictions[0][6], e_x, e_y, e_z ] ])                              
@@ -759,30 +788,30 @@ def evaluate_data_from_file_dnn_poly(regressor, data, name=""):
         # Set model params
         model_params = {"learning_rate": app.LEARNING_RATE}
         # Instantiate Estimator
-        app.nn = tf.contrib.learn.Estimator(model_fn=model_fn, model_dir=app.model_path_2, params=model_params)#9", params=model_params)
+        app.nn = tf.contrib.learn.Estimator(model_fn=model_fn, model_dir="/home_local/shar_sc/learn_motion_models_secondary_cart_motorpos_5", params=model_params)
         # directory 2 for simple false , 3 for simple true        
         #TODO write model and read every time for training
         def get_train_inputs():
             if app.simple == True:
                 if app.output == 0:
-                    x = tf.constant([ [ i,list_x1[0],list_y1[0],list_z1[0],next_point[0],next_point[1],next_point[2] ] ])             
+                    x = tf.constant([ [ i,list_x1[0],list_y1[0],list_z1[0], e_x, e_y, e_z ] ])             
                     y = tf.constant([ [0.0, 0.0, 0.0] ]) #([ [[0.0],[0.0],[0.0],[0.0],[0.0],[0.0],[0.0] ]])
                 else:
                     #TODO are all these parameters necessary? yes but only e_x,e_y,e_z should suffice, maybe time, or later sensor inputs
-                    x = tf.constant([ [ i,list_x1[0],list_y1[0],list_z1[0],next_point[0],next_point[1],next_point[2] ] ])  
+                    x = tf.constant([ [ i,list_x1[0],list_y1[0],list_z1[0], e_x, e_y, e_z ] ])  
                     #TODO should be 10 parameteres here                            
                     #TODO
-                    y = tf.constant([ [0.0,0.0,0.0,0.0,0.0,0.0,0.0] ]) 
+                    y = tf.constant([ [0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0] ]) 
             else:
                 if app.output == 0:
-                    x = tf.constant([ [ i,list_x1[0],list_y1[0],list_z1[0],reached_frame[0:3,3][0],reached_frame[0:3,3][1],reached_frame[0:3,3][2],predictions[0][0],predictions[0][1],predictions[0][2], e_x, e_y, e_z,error_sec_old[0],error_sec_old[1],error_sec_old[2],next_point[0],next_point[1],next_point[2] ] ])             
+                    x = tf.constant([ [ i,list_x1[0],list_y1[0],list_z1[0],reached_frame[0:3,3][0],reached_frame[0:3,3][1],reached_frame[0:3,3][2],predictions[0][0],predictions[0][1],predictions[0][2], e_x, e_y, e_z ] ])             
                     y = tf.constant([ [0.0, 0.0, 0.0] ]) #([ [[0.0],[0.0],[0.0],[0.0],[0.0],[0.0],[0.0] ]])
                 else:
                     #TODO are all these parameters necessary? yes but only e_x,e_y,e_z should suffice, maybe time, or later sensor inputs
-                    x = tf.constant([ [ i,list_x1[0],list_y1[0],list_z1[0],reached_frame[0:3,3][0],reached_frame[0:3,3][1],reached_frame[0:3,3][2],predictions[0][0],predictions[0][1],predictions[0][2],predictions[0][3],predictions[0][4],predictions[0][5],predictions[0][6], e_x, e_y, e_z,error_sec_old[0],error_sec_old[1],error_sec_old[2],next_point[0],next_point[1],next_point[2] ] ])                              
+                    x = tf.constant([ [ i,list_x1[0],list_y1[0],list_z1[0],reached_frame[0:3,3][0],reached_frame[0:3,3][1],reached_frame[0:3,3][2],predictions[0][0],predictions[0][1],predictions[0][2],predictions[0][3],predictions[0][4],predictions[0][5],predictions[0][6],predictions[0][7],predictions[0][8],predictions[0][9], e_x, e_y, e_z ] ])                              
                     #TODO should be 9 parameteres here
                     #TODO
-                    y = tf.constant([ [0.0,0.0,0.0,0.0,0.0,0.0,0.0] ]) 
+                    y = tf.constant([ [0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0] ]) 
             '''sess= tf.Session()
             a = sess.run(y)
             print a'''
@@ -791,18 +820,18 @@ def evaluate_data_from_file_dnn_poly(regressor, data, name=""):
         def get_pred_inputs():
             if app.simple==True: 
                 if app.output == 0:
-                    x = tf.constant([ [ i,list_x1[0],list_y1[0],list_z1[0],next_point[0],next_point[1],next_point[2]  ] ])             
+                    x = tf.constant([ [ i,list_x1[0],list_y1[0],list_z1[0], e_x, e_y, e_z ] ])             
                 else:
-                    x = tf.constant([ [ i,list_x1[0],list_y1[0],list_z1[0],next_point[0],next_point[1],next_point[2]  ] ])
+                    x = tf.constant([ [ i,list_x1[0],list_y1[0],list_z1[0], e_x, e_y, e_z ] ])
             else:
                 if app.output == 0:
-                    x = tf.constant([ [ i,list_x1[0],list_y1[0],list_z1[0],reached_frame[0:3,3][0],reached_frame[0:3,3][1],reached_frame[0:3,3][2],predictions[0][0],predictions[0][1],predictions[0][2], e_x, e_y, e_z,error_sec_old[0],error_sec_old[1],error_sec_old[2],next_point[0],next_point[1],next_point[2]  ] ])             
+                    x = tf.constant([ [ i,list_x1[0],list_y1[0],list_z1[0],reached_frame[0:3,3][0],reached_frame[0:3,3][1],reached_frame[0:3,3][2],predictions[0][0],predictions[0][1],predictions[0][2], e_x, e_y, e_z ] ])             
                 else:
-                    x = tf.constant([ [ i,list_x1[0],list_y1[0],list_z1[0],reached_frame[0:3,3][0],reached_frame[0:3,3][1],reached_frame[0:3,3][2],predictions[0][0],predictions[0][1],predictions[0][2],predictions[0][3],predictions[0][4],predictions[0][5],predictions[0][6], e_x, e_y, e_z,error_sec_old[0],error_sec_old[1],error_sec_old[2],next_point[0],next_point[1],next_point[2]  ] ])            
+                    x = tf.constant([ [ i,list_x1[0],list_y1[0],list_z1[0],reached_frame[0:3,3][0],reached_frame[0:3,3][1],reached_frame[0:3,3][2],predictions[0][0],predictions[0][1],predictions[0][2],predictions[0][3],predictions[0][4],predictions[0][5],predictions[0][6],predictions[0][7],predictions[0][8],predictions[0][9], e_x, e_y, e_z ] ])            
             return x
         
         # Fit
-        #nn.fit(input_fn=get_train_inputs, steps=1000)circle_dnn_poly_multipl_lrnrs_simple3
+        #nn.fit(input_fn=get_train_inputs, steps=1000)
         #app.nn.partial_fit(input_fn=get_train_in0.1 puts,steps=1) # train once cause the app.cost is not yet updated
 
         '''
@@ -813,8 +842,7 @@ def evaluate_data_from_file_dnn_poly(regressor, data, name=""):
         # Print out predictions
         if (app.initial_run == True):
             app.initial_run = False
-            #app.nn.partial_fit(input_fn=get_train_inputs,steps=1)
-            app.nn.fit(input_fn=get_train_inputs,steps=1)
+            app.nn.partial_fit(input_fn=get_train_inputs,steps=1)
                 
         result_sec = app.nn.predict(input_fn=get_pred_inputs) #(x=prediction_set.data, as_iterable=True)
         predictions_sec = None
@@ -864,11 +892,15 @@ def evaluate_data_from_file_dnn_poly(regressor, data, name=""):
         sum_motor_pos_sec[4] += predictions_sec[4]
         sum_motor_pos_sec[5] += predictions_sec[5]
         sum_motor_pos_sec[6] += predictions_sec[6]
+        sum_torso_sec[0]     += predictions_sec[7]
+        sum_torso_sec[1]     += predictions_sec[8]
+        sum_torso_sec[2]     += predictions_sec[9]
+                        
         estimated_pos_sec = [0.,0.,0.,0.,0.,0.,0.]
         estimated_pos_sec = estimated_pos + sum_motor_pos_sec #motor_pos_center + sum_motor_pos_sec
         estimated_tor_sec = [0.,0.,0.]
-        #print "sum_torso_sec", sum_torso_sec
-        #estimated_tor_sec = estimated_pos_torso + sum_torso_sec #torso_center + sum_torso_sec
+        print "sum_torso_sec", sum_torso_sec
+        estimated_tor_sec = estimated_pos_torso + sum_torso_sec #torso_center + sum_torso_sec
         #TODO another problem here , solved
         #'''
         
@@ -888,47 +920,17 @@ def evaluate_data_from_file_dnn_poly(regressor, data, name=""):
         app.rave.draw_line("line", points_sec, [0,1,1], 4)
         #print "reached: ",reached_frame[0:3,3] 
         #print "expected: ",points_expected[i]
-        #error assumption 
-        #points_sec[i] reached_frame[0:3,3]
-        #TODO why is points_sec[i] working and reached_frame[0:3,3] not , below:
-        print "reached_frame[0:3,3]", reached_frame[0:3,3]
-        print " points_expected[i]",  points_expected[i] # same
-        print "points_sec[i]" , points_sec[i] #same
-        print "points_expected " , len(points_expected)
-        print "i", i 
+        #error assumption
         error_sec = calc_error(points_sec[i], points_expected[i][0], points_expected[i][1], points_expected[i][2])
         print "error_sec:", error_sec  
         #TODO this is actually cost for previous step not current step, correct this
-        error_sec_old[0] = points_sec[i][0] - points_expected[i][0] 
-        error_sec_old[1] = points_sec[i][1] - points_expected[i][1] 
-        error_sec_old[2] = points_sec[i][2] - points_expected[i][2] 
-        if i<( len(points_expected)-1 ):
-            next_point[0] = points_sec[i][0] - points_expected[i+1][0]
-            next_point[1] = points_sec[i][1] - points_expected[i+1][1]
-            next_point[2] = points_sec[i][2] - points_expected[i+1][2]                
-        else:
-            next_point = [0.,0.,0.]    
-        print "error_sec_old: ", error_sec_old                
+        
         #TODO error is distance from table and not from last trajectory
-        app.cost = error_sec*100.0 + uniform(0, 1) #regularization noise 
-        print "app.cost:", app.cost
-        
-        #train again, many times as the cost for this input is known        
-        
-        #sess = tf.Session()
-        #sess.run(loss_variable.initializer)
-        #tf.assign(loss_variable, app.cost)
-        #tf.assign(loss, app.cost)
-        
-        loss_up = tf.Variable(app.cost, name="loss_update", dtype=tf.float64) # tf.losses.mean_squared_error(targets, predictions)
-        tf.losses.add_loss(loss_up)
-        
-        #app.nn.partial_fit(input_fn=get_train_inputs,steps=app.steps_2)
-        app.nn.fit(input_fn=get_train_inputs,steps=app.steps_2)
+        app.cost = error_sec*100.0  
 
-        #loss_variable.assign(app.cost)
-        #sess.close()   
-    
+        #train again, many times as the cost for this input is known        
+        app.nn.partial_fit(input_fn=get_train_inputs,steps=1)
+
         #add errors        
         total_error += error
         total_error_sec += error_sec            

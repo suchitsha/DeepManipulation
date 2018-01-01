@@ -1,7 +1,7 @@
 # {'exits': [],
 #  'item_type': 'script_item',
 #  'parameters': [],
-#  'position': (80, 20, -1, -1),
+#  'position': (90, 20, -1, -1),
 #  'transitions': []}
 ### end of header
 from os import listdir
@@ -236,7 +236,7 @@ def slide(image_path):
         # Feed the image_data as input to the graph and get first prediction
         softmax_tensor = sess.graph.get_tensor_by_name('final_result:0')        
         
-        #'''
+        '''
         # visualize last layer
         #
         #print("ops:", sess.graph.get_operations())
@@ -251,11 +251,11 @@ def slide(image_path):
         #print(p[0][0][0])
         print(p)
         #threshholding
-        '''
-        for i in range(len(p[0][0][0])):
-            if (p[0][0][0][i] < .8):
-                p[0][0][0][i] = 0.0
-        '''                
+        
+        #for i in range(len(p[0][0][0])):
+        #    if (p[0][0][0][i] < .8):
+        #        p[0][0][0][i] = 0.0
+        
         #plt.imshow(np.reshape(p[0][0][0],[32,64]), interpolation="nearest", cmap="gray")                      
         plt.imshow(np.reshape(p,[32,64]), interpolation="nearest", cmap="gray")                              
         f = '/home_local/shar_sc/'+ 'image.png'

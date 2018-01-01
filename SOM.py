@@ -15,7 +15,10 @@ from numpy import (array, unravel_index, nditer, linalg, random, subtract,
                    power, exp, pi, zeros, arange, outer, meshgrid, dot)
 from collections import defaultdict
 from warnings import warn
-from matplotlib.pyplot import plot,show
+#from matplotlib.pyplot import plot,show
+import matplotlib.pyplot as plt
+from matplotlib import transforms
+from scipy import ndimage
 
 def init(self):
     pass
@@ -30,13 +33,16 @@ def execute(self):
     #print "data:" , data        
 
     #fit SOM
-    som = MiniSom(40,1, 2, sigma=1., learning_rate=0.1, neighborhood_function='gaussian') # initialization of 6x6 SOM
+    som = MiniSom(20,1, 2, sigma=1., learning_rate=0.1, neighborhood_function='gaussian') # initialization of 6x6 SOM
     print "Training..."
     #som.random_weights_init(data)
     som.train_batch(data, 10000) # trains the SOM with 100 iterations
     print "Training complete..."
     
-    from matplotlib.pyplot import plot,axis,show,pcolor,colorbar,bone   
+    base = plt.gca().transData
+    rot = transforms.Affine2D().rotate_deg(90)
+    
+    #from matplotlib.pyplot import plot,axis,show,pcolor,colorbar,bone,savefig 
     x = []
     y = []
     sx = []
@@ -44,18 +50,22 @@ def execute(self):
     for i in range(len(data)):
         x.append(data[i][0])
         y.append(data[i][1])
-    plot(x, y, "o")
+    #plt.plot(x, y, "o", transform= rot + base )
 
     w = som.get_weights()        
     for i in range(len(w)):
         sx.append(w[i][0][0])
         sy.append(w[i][0][1])
     # add point to collect data
-    sx.append(-0.3)        
-    sy.append(0.25)        
-    plot(sx,sy,"s-")
-    show()
-
+    sx.append(-0.2)        
+    sy.append(0.18)        
+    plt.axis('off')
+    plt.plot(sx,sy,"ks-", lw=8, transform= rot + base)#"-", color='black')    
+    #legend()
+    f = '/home_local/shar_sc/'+ 'som' + '.png'
+    plt.show()
+    plt.savefig(f, bbox_inches='tight')
+    
 def fast_norm(x):
     """Returns norm-2 of a 1-D numpy array.
 

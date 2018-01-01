@@ -2,7 +2,7 @@
 #  'item_type': 'script_item',
 #  'parameters': [],
 #  'position': (380, 400, -1, -1),
-#  'transitions': [('out', 'dummy')]}
+#  'transitions': [('out', 'circle_dnn_poly_multipl_lrnrs_torso')]}
 ### end of header
 import time
 import math
@@ -598,7 +598,13 @@ def evaluate_data_from_file_dnn_poly(regressor, data, name=""):
         #error assumpotion
         error = calc_error(reached_frame[0:3,3], points_expected[i][0], points_expected[i][1], points_expected[i][2])
         print "error:", error
+        
+        
+        #TODO
         continue
+        
+        
+        
         
         #data for other network
         e_x = reached_frame[0:3,3][0] - points_expected[i][0]

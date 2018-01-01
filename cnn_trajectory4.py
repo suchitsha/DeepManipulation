@@ -12,6 +12,7 @@ from tensorflow.contrib import learn
 from tensorflow.contrib.learn.python.learn.estimators import model_fn as model_fn_lib
 
 # cnn architecture based on https://matthewearl.github.io/2016/05/06/cnn-anpr/
+#this one is inverted trajectory of cnn1
 
 #def init(self):
 points_on_trajectory = 7 #50 # 20
@@ -24,18 +25,18 @@ lr = 0.001
 iter1 = 10#0
 batch_size = 100#0
 dir_no = 5 # num of directions
-image_dir = '/home_local/shar_sc/cnn_trajectory_primitives/'
-s_direct = '/home_local/shar_sc/cnn_model/'
-out_dir = '/home_local/shar_sc/cnn_result/'
+image_dir = '/home_local/shar_sc/cnn_trajectory_primitives4/'
+s_direct = '/home_local/shar_sc/cnn_model4/model.ckpt'
+out_dir = '/home_local/shar_sc/cnn_result4/'
 #    pass
 
 def generate_result(name, int_pred):
     '''
-    0 left to right -
-    1 down to up |
-    2 left to right diagonal upwards /
-    3 left to right diagonal down \
-    4 up to down |
+    0 left to right - straight_90
+    1 down to up |    straight_0
+    2 left to right diagonal upwards / straight_45
+    3 left to right diagonal down \  straight_135
+    4 up to down |  straight_180
     #               5 right to left diagonal down /
     ''' 
     point1 = [randint(0, 100),randint(0, 100)] 
@@ -49,7 +50,7 @@ def generate_result(name, int_pred):
         lx.append(point1[0])
         ly.append(point1[1])        
         if (direction == 0):
-            point2[0] = point2[0] + jumph
+            point2[0] = point2[0] - jumph
             point1 = point2
             lx.append(point2[0])
             ly.append(point2[1])        
@@ -59,13 +60,13 @@ def generate_result(name, int_pred):
             lx.append(point2[0])
             ly.append(point2[1])        
         elif (direction == 2):
-            point2[0] = point2[0] + jumph 
+            point2[0] = point2[0] - jumph 
             point2[1] = point2[1] + jumpv 
             point1 = point2
             lx.append(point2[0])
             ly.append(point2[1])                    
         elif (direction == 3):
-            point2[0] = point2[0] + jumph
+            point2[0] = point2[0] - jumph
             point2[1] = point2[1] - jumpv 
             point1 = point2
             lx.append(point2[0])
@@ -77,7 +78,7 @@ def generate_result(name, int_pred):
             lx.append(point2[0])
             ly.append(point2[1])                    
         elif (direction == 5):
-            point2[0] = point2[0] - jumph
+            point2[0] = point2[0] + jumph
             point2[1] = point2[1] - jumpv 
             point1 = point2
             lx.append(point2[0])
@@ -115,7 +116,7 @@ def generate_images(name):
         lx.append(point1[0])
         ly.append(point1[1])        
         if (direction == 0):
-            point2[0] = point2[0] + jumph
+            point2[0] = point2[0] - jumph
             point1 = point2
             lx.append(point2[0])
             ly.append(point2[1])        
@@ -127,14 +128,14 @@ def generate_images(name):
             ly.append(point2[1])        
             direction_codes.append(direction)
         elif (direction == 2):
-            point2[0] = point2[0] + jumph 
+            point2[0] = point2[0] - jumph 
             point2[1] = point2[1] + jumpv 
             point1 = point2
             lx.append(point2[0])
             ly.append(point2[1])                    
             direction_codes.append(direction)
         elif (direction == 3):
-            point2[0] = point2[0] + jumph
+            point2[0] = point2[0] - jumph
             point2[1] = point2[1] - jumpv 
             point1 = point2
             lx.append(point2[0])
@@ -148,7 +149,7 @@ def generate_images(name):
             ly.append(point2[1])             
             direction_codes.append(direction)                   
         elif (direction == 5):
-            point2[0] = point2[0] - jumph
+            point2[0] = point2[0] + jumph
             point2[1] = point2[1] - jumpv 
             point1 = point2
             lx.append(point2[0])
@@ -301,8 +302,8 @@ def execute():
                 batch_cost, _ = sess.run([cost, opt], feed_dict={inputs_: images_in, targets_: inp})
                 print("Epoch: {}/{}/{}".format(i+1,e+1, epochs), "Training loss: {:.4f}".format(batch_cost))
                 step = step +1
-        save_direct = s_direct + 'cnn_model'
-        save_path = saver.save(sess,save_direct,global_step=step)
+        
+        save_path = saver.save(sess,s_direct,global_step=step)
         print("Model saved in file: %s" % save_path)
             
         '''            

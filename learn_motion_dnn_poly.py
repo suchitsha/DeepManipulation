@@ -254,10 +254,12 @@ def train_dnn(training_set):
                                             #best for cart pos circle
                                             #model_dir="/home_local/shar_sc/learn_motion_models_temp_cartesian",
                                             #cart_pos testing 8888
-                                            model_dir="/home_local/shar_sc/learn_motion_models_temp_cartesian3",
+                                            #model_dir="/home_local/shar_sc/learn_motion_models_temp_cartesian3",
+                                            
+                                            model_dir="/home_local/shar_sc/learn_motion_models_temp6",
                                             )
     # Fit
-    regressor.fit(input_fn=lambda: input_fn(training_set), steps=100)#5000)
+    regressor.fit(input_fn=lambda: input_fn(training_set), steps=1000)#5000)
     return regressor
 
 def process_data(file_name,output=0):

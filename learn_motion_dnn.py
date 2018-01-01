@@ -1,7 +1,7 @@
 # {'exits': [],
 #  'item_type': 'script_item',
 #  'parameters': [],
-#  'position': (280, 720, -1, -1),
+#  'position': (270, 770, -1, -1),
 #  'transitions': []}
 ### end of header
 import time

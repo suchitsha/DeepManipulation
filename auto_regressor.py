@@ -17,9 +17,9 @@ points_on_trajectory = 20
 FEATURES = [""]#, "x", "y", "z"]
 COLUMNS = ["",""]# "out_0","out_1","out_2","out_3","out_4","out_5","out_6","out_7","out_8","out_9","out_10","out_11","out_12","out_13","out_14","out_15","out_16","out_17","out_18","out_19","out_20"]        
 LABEL = [""]#out_0","out_1","out_2","out_3","out_4","out_5","out_6","out_7","out_8","out_9","out_10","out_11","out_12","out_13","out_14","out_15","out_16","out_17","out_18","out_19","out_20"]
-num_images = 200000
+num_images = 100#20000#200000
 dir1 = []
-lr = 0.0001
+lr = 0.001
 iter1 = 1#0
 batch_size = 100
 num_of_results = 10
@@ -261,7 +261,7 @@ def execute():
     # Add ops to save and restore all the variables.
     saver = tf.train.Saver()
 
-    #''' To generate new images
+    ''' To generate new images
     for i in range(num_images):
         dirc = generate_images('fig_'+str(i))
         #print("directions:",i , dirc)
@@ -331,6 +331,39 @@ def execute():
     fig.savefig('/home_local/shar_sc/foo1.png')
     plt.clf()
     plt.close()
+    
+    
+    
+    
+    '''
+    #TODO remove this block , prints middle layer
+    middle_layer = sess.run(conv3_1, feed_dict={inputs_: in_imgs})# .reshape((10, 28, 28, 1))})
+    #10 * 32*32     x =10 * 256*256
+    for imi in range(10):
+         middle_layer[imi] = middle_layer[imi].reshape(16,16)
+         middle_layer[imi] = middle_layer[imi].resize(128,128)
+    print middle_layer.shape
+    
+    for images, row in zip([in_imgs, middle_layer], axes):
+        for img, ax in zip(images, row):
+            ax.imshow(img.reshape((128, 128)), cmap='Greys_r')
+            ax.get_xaxis().set_visible(False)
+            ax.get_yaxis().set_visible(False)
+    fig.tight_layout(pad=0.1)
+    fig.savefig('/home_local/shar_sc/foo_m.png')
+    plt.clf()
+    plt.close()
+    
+    #'''
+    
+    
+    
+    
+    
+    
+    
+    
+    
     #'''
     #To read data
     objs = []
@@ -377,11 +410,11 @@ def execute():
                 val_in.append(encoded_img)
                 val_in_img.append(images_in1[i])
                 val_in_dir.append(objs[j*batch_size + i])
-            '''#TODO
+            #'''#TODO
             if i == 5:
                 break
             #'''     
-        '''
+        #'''
         if j == 0:
             break
         #'''     

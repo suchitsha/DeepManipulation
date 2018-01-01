@@ -73,9 +73,9 @@ def execute(self):
     #sliding_window
     app.window_width_fraction=0.20 #0.10#0.25
     app.window_height_fraction=0.20 #0.10#0.25
-    app.step_size_width=20 #in pixels 100 200
+    app.step_size_width= 20 #in pixels 100 200
     app.step_size_height=20 #in pixels 100 200    
-    app.binary_threshold=0.70 #0.40 or 50
+    app.binary_threshold=0.7 #0.70 #0.40 or 50
     
     #learn_motion
     #for circle_dnn_poly_multipl_lrnrs_simple.py

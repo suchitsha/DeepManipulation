@@ -1,7 +1,7 @@
 # {'exits': [],
 #  'item_type': 'script_item',
 #  'parameters': [],
-#  'position': (540, 290, -1, -1),
+#  'position': (10, 670, -1, -1),
 #  'transitions': []}
 ### end of header
 import time
@@ -261,20 +261,25 @@ def train_dnn(training_set):
     regressor = tf.contrib.learn.DNNRegressor(feature_columns=feature_cols,
                                             hidden_units=[1024, 512, 256,256,256,256,256,256,256,256,256,256,256,256,256,256,256,256,256,256,256,256,256,256,256,256,256,256,256],#256,256,256,256,256,256,256,256,256,256,256,256,256],
                                             activation_fn=tf.nn.relu,
-                                            dropout=0.1, ###
+                                            #dropout=0.1,
                                             #gradient_clip_norm=None,
                                             #enable_centered_bias=True,
                                             label_dimension=dim,
-                                            optimizer=tf.train.ProximalAdagradOptimizer(  ###
-                                            learning_rate=0.0001,
-                                            l1_regularization_strength=0.001),
+                                            #optimizer=tf.train.ProximalAdagradOptimizer(
+                                            #learning_rate=0.001,
+                                            #l1_regularization_strength=0.001),
                                             # motor pos small data large repetitions cart coord
                                             #model_dir="/home_local/shar_sc/learn_motion_models_small_cart_motorpos"
+                                            
+                                            
+                                            
                                             
                                             #real robot data
                                             #model_dir="/home_local/shar_sc/learn_motion_models_scrub1" # scrub
                                             #model_dir="/home_local/shar_sc/learn_motion_models_accumulation2" # accum
-                                            model_dir="/home_local/shar_sc/learn_motion_models_temp6" # accum
+                                            model_dir="/home_local/shar_sc/learn_motion_models_accumulation5"# 4" # accum4 with orientation
+                                            
+                                            
                                             
                                             # cart pos small data large repetitions cart coord
                                             #model_dir="/home_local/shar_sc/learn_motion_models_small_cart_cartpos"
@@ -291,7 +296,7 @@ def train_dnn(training_set):
                                             )
     # Fit
                                             
-    regressor.fit(input_fn=lambda: input_fn(training_set), steps=800000)
+    regressor.fit(input_fn=lambda: input_fn(training_set), steps=1)
     return regressor
 
 def process_data(file_name,output=0):
@@ -411,10 +416,10 @@ def learnMotion():
     radius = 0.15
     num_points = 10 #10 # points on circle
     skip = 0
-    iterations = 5     # trajectories to be generated
+    iterations = 1     # trajectories to be generated
     prerecorded = False
     dnn_prerecorded = True
-    demo = False
+    demo = True
     if(not dnn_prerecorded):
         #clfs = train_learner("svm") # not for 3 dim Y
         #clfs = train_learner("lin")
@@ -436,7 +441,7 @@ def learnMotion():
     else:
         # for dnn
         #train
-        training_set = process_data("/home/shar_sc/Documents/DirtDetection/data/motion/data2_40_10.p",app.output)#scrub1.p",app.output)#accum2.p",app.output)#data_rec_circle60.p",app.output)#data2_21300_10.p",app.output)
+        training_set = process_data("/home/shar_sc/Documents/DirtDetection/data/motion/data_rec_accum5.p",app.output)#data_rec_accum2.p",app.output)#scrub1.p",app.output)#accum2.p",app.output)#data_rec_circle60.p",app.output)#data2_21300_10.p",app.output)
         regressor = train_dnn(training_set) 
        
         ''' To test and evaluate dnn without executing trajectory
@@ -459,7 +464,7 @@ def learnMotion():
     temp_cd = app.rave.get_config_dict()
     temp_cd["right_arm"]
     
-    #'''
+    '''
     app.idle_cfg = {
         'head': array([-0.4, 0.6]), 
         'right_arm': array([0, -1.5, -0.2909,  1.8,  0.    ,  -0.0    , -0.0]),
@@ -470,26 +475,30 @@ def learnMotion():
     }
     app.rave.set_config_dict(app.idle_cfg)
     app.rave.remove_coords("*")
-    #'''
+    '''
     #For demo
     if (demo):
         #app.rave.clear_graphic_handles("*")
         app.rave.set_config_dict(app.start_cfg)
+        
+        ''' # for single random point
         r = random.randint(len(app.particles[0]))
         print r
         print app.particles
-        x_part = app.particles[0][r]*2.
-        y_part = app.particles[1][r]*2.
+        x_part = app.particles[0][r] #+ 0.2 #max(app.particles[0])
+        y_part = app.particles[1][r] #- 0.15 #min(app.particles[1])
         z_part = 0.01 #TODO 
 
         roi_frame = odb_utils.float16_to_array(app.wsr.object_store["tray"]["toolframe"])
-        of_frame = dot(dot(app.rave.get_frame("tray"), roi_frame), txyz(x_part,y_part,z_part))
+        #of_frame = dot(dot(app.rave.get_frame("tray"), roi_frame),txyz(x_part,y_part,z_part))
+        of_frame = dot(dot(app.rave.get_frame("tray"), roi_frame), dot(txyz(x_part,y_part,z_part), rotz(pi)) )
         hand_frame = dot(of_frame, app.grasp_frame)                
         app.rave.add_coord("ofse", of_frame,"small")
         #app.rave.add_coord("hand", hand_frame)
         
         #initial = app.rave.get_config_dict()
         #q_dict_3 = app.find_rotational_ik(hand_frame, 1)
+        #armconfig = app.rave.find_rotational_ik("right_arm", app.grasp_frame, of_frame, [0, 0, 1], 0, 360, 10, best=True, check_env_collisions=False)
         armconfig = app.rave.find_rotational_ik("right_arm", app.grasp_frame, of_frame, [0, 0, 1], 0, 360, 10, best=True, check_env_collisions=False)
         q_dict_3 = app.rave.get_config_dict()
         q_dict_3["right_arm"] = armconfig        
@@ -499,6 +508,38 @@ def learnMotion():
             return       
         app.rave.set_config_dict(q_dict_3)               
         app.evaluate_data_demo_accum(regressor, num_points)
+
+        '''
+        
+        x_pmax = max(app.particles[0])
+        y_pmin = min(app.particles[1])
+        margin_top = 0.07#9#TODO
+        for pt in range(len(app.boundary_points.vertices)):
+            x_part = app.particles[0][app.boundary_points.vertices[pt]] -margin_top #app.particles[0][app.boundary_points.simplices[pt][0]]
+            y_part = app.particles[1][app.boundary_points.vertices[pt]] #app.particles[1][app.boundary_points.simplices[pt][1]]
+            z_part = 0.01 #TODO 
+            
+            if  (x_part > (x_pmax/2 -margin_top) ): # and (y_part < y_pmin/2 ) ):
+                roi_frame = odb_utils.float16_to_array(app.wsr.object_store["tray"]["toolframe"])
+                #of_frame = dot(dot(app.rave.get_frame("tray"), roi_frame),txyz(x_part,y_part,z_part))
+                of_frame = dot(dot(app.rave.get_frame("tray"), roi_frame), dot(txyz(x_part,y_part,z_part), rotz(pi)) )
+                hand_frame = dot(of_frame, app.grasp_frame)  
+                name_coord = "ofse" + str(pt)              
+                app.rave.add_coord(name_coord, of_frame,"small")
+                #app.rave.add_coord("hand", hand_frame)
+                
+                #initial = app.rave.get_config_dict()
+                #q_dict_3 = app.find_rotational_ik(hand_frame, 1)
+                #armconfig = app.rave.find_rotational_ik("right_arm", app.grasp_frame, of_frame, [0, 0, 1], 0, 360, 10, best=True, check_env_collisions=False)
+                armconfig = app.rave.find_rotational_ik("right_arm", app.grasp_frame, of_frame, [0, 0, 1], 0, 360, 10, best=True, check_env_collisions=False)
+                q_dict_3 = app.rave.get_config_dict()
+                q_dict_3["right_arm"] = armconfig        
+
+                if q_dict_3 is None:
+                    print "cannot find IK"
+                    return       
+                app.rave.set_config_dict(q_dict_3)               
+                app.evaluate_data_demo_accum(regressor, num_points)
         return
         
         
@@ -507,7 +548,7 @@ def learnMotion():
         #q_dict = app.rave.get_config_dict()    
         t = app.rave.get_manip_frame("right_arm")
         data = []
-        f = open("/home/shar_sc/Documents/DirtDetection/data/motion/data2_1900_10.p","rb")#scrub1.p","rb")#accum2.p","rb")#data_200_10.p","rb")
+        f = open("/home/shar_sc/Documents/DirtDetection/data/motion/data_rec_accum5.p","rb")#accum2.p","rb")#scrub1.p","rb")#accum2.p","rb")#data_200_10.p","rb")
         while True:
             try:
                 data.append(pickle.load(f))

@@ -1,7 +1,7 @@
 # {'exits': [],
 #  'item_type': 'script_item',
 #  'parameters': [],
-#  'position': (440, 560, -1, -1),
+#  'position': (210, 540, -1, -1),
 #  'transitions': []}
 ### end of header
 import numpy as np

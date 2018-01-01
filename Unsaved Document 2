@@ -1,0 +1,40 @@
+
+
+import tensorflow as tf
+
+ckpt_folder = ''
+
+sess = tf.InteractiveSession()
+
+# First
+x = tf.nn.Dense( x, 1024, activation=tf.nn.relu )
+x = tf.nn.Dense( x, 1024, activation=tf.nn.relu )
+x = tf.nn.Dense( x, 1024, activation=tf.nn.relu )
+x = tf.nn.Dense( x, 1024, activation=tf.nn.relu )
+y1 = tf.nn.Dense( x, 1024, activation=tf.nn.relu )
+
+
+chkpt = tf.train.get_checkpoint_state(ckpt_folder)
+if chkpt and chkpt.model_checkpoint_path:
+    self.saver.restore(self.session, chkpt.model_checkpoint_path)
+
+
+#with tf.variable_scope(''):
+x = tf.placeholder(tf.float32, [])
+y1 = tf.placeholder(tf.float32, [])
+
+x = tf.nn.Dense( x, 1024, activation=tf.nn.relu )
+x = tf.nn.Dense( x, 1024, activation=tf.nn.relu )
+x = tf.nn.Dense( x, 1024, activation=tf.nn.relu )
+x = tf.nn.Dense( x, 1024, activation=tf.nn.relu )
+y2 = tf.nn.Dense( x, 1024, activation=tf.nn.relu )
+
+loss = func(y1, y2)
+
+optimizer = tf.train.AdamOptimizer(1e-4).minimize(loss)
+
+with tf.Session() as sess:
+
+    for _ xrange(10000):
+        sess.run(optimizer, {x: , y1:})    
+

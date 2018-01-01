@@ -9,6 +9,7 @@ import pyutils.matrix as pm
 import cv2
 import numpy as np
 from odb_interface import odb_utils
+from scipy.spatial import ConvexHull
 
 def init(self):
      pass
@@ -16,11 +17,11 @@ def init(self):
 def execute(self):
     object_of_interest = "tray"
 
-    fd = open("/home/shar_sc/exec_env/suchit/metainfo_20170315_133418.txt")
+    fd = open("/home/shar_sc/Documents/DirtDetection/data/suchit/metainfo_20170315_133418.txt") #exec_env/suchit/metainfo_20170315_133418.txt")
     metainfo = pickle.load(fd)
     fd.close()
       
-    fd = open("/home/shar_sc/exec_env/suchit/q_act_20170315_133930.txt")
+    fd = open("/home/shar_sc/Documents/DirtDetection/data/suchit/q_act_20170315_133930.txt") #exec_env/suchit/q_act_20170315_133930.txt")
     q = map(float, fd.read().strip().split("\n"))
     fd.close()
     cfg = app.rave.get_config_dict()
@@ -34,10 +35,10 @@ def execute(self):
     roi_frame = odb_utils.float16_to_array(app.wsr.object_store["tray"]["toolframe"]) 
     object_frame = app.rave.get_frame(object_of_interest)
     target_frame = dot(object_frame, roi_frame)
-    app.rave.add_coord("tray", object_frame)
+    #app.rave.add_coord("tray", object_frame)
     center = dot(head, metainfo["ext"])
     app.center = center
-    app.rave.add_coord("center", center)
+    #app.rave.add_coord("center", center)
 
     img_name = app.out_dir + 'heat_map_th4.jpeg' 
     print "Reading Image" , img_name
@@ -102,6 +103,11 @@ def execute(self):
             #distance = norm(dot(inv(origin), pm.txyz(*position))[0:3,3])
             #print distance
     particles = np.vstack((particles_x, particles_y))
-    app.particles = particles            
-    print app.particles
+    app.particles = particles  
+    #make a convex hull around the particles
+    allPoints=np.column_stack((particles_x,particles_y))
+    app.boundary_points = ConvexHull(allPoints)#,qhull_options='QBk:2')          
+    print "particles:", app.particles
+    #print app.particles[0][app.boundary_points.vertices[0][0]]#.simplices[0][0]]
+    print "boundaries:", app.boundary_points.vertices
         

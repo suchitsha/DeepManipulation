@@ -1,7 +1,7 @@
 # {'exits': [],
 #  'item_type': 'script_item',
 #  'parameters': [],
-#  'position': (10, 720, -1, -1),
+#  'position': (10, 770, -1, -1),
 #  'transitions': []}
 ### end of header
 def init(self):
