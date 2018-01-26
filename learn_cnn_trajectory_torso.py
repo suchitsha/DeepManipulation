@@ -395,7 +395,7 @@ def learnMotion():
     for i1 in range(len(app.cnn_pred)):
         #app.rave.clear_graphic_handles("*")
         print "dnn predicted iteration:",i1+1
-        skip_point_data = 60#300#90#90#100#180 #70
+        skip_point_data = 50#60#300#90#90#100#180 #70
         start = skip_point_data
         end = app.num_points + skip_point_data
         trial = data[start:end]   

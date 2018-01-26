@@ -1,0 +1,12 @@
+#!/bin/bash
+
+# setup environment
+export ARCH=osl42-x86_64 
+export PATH=/volume/software/common/foreign_packages/vtk/6.3.0/bin/osl42-x86_64:${PATH} 
+export LD_LIBRARY_PATH=/volume/software/common/foreign_packages/vtk/6.3.0/lib/osl42-x86_64:/volume/software/common/foreign_packages/vtk/6.3.0/python/osl42-x86_64/mpi4py/lib-pmpi:${LD_LIBRARY_PATH} 
+export PYTHONPATH=/volume/software/common/foreign_packages/vtk/6.3.0/python/osl42-x86_64:${PYTHONPATH} 
+export CMAKE_PREFIX_PATH=/volume/software/common/cmake/osl42-x86_64/vtk/6.3.0:${CMAKE_PREFIX_PATH} 
+ 
+#execute command line
+$*
+

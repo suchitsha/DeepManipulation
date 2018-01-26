@@ -1,0 +1,16 @@
+#!/bin/bash
+
+# setup environment
+export ARCH=osl42-x86_64 
+export PATH=/volume/software/common/foreign_packages/OpenCV/3.1.0/bin/osl42-x86_64:/volume/software/common/foreign_packages/gdal/1.10.1/bin/osl42-x86_64:/volume/software/common/foreign_packages/OpenNI2/2.2.0/osl42-x86_64/Samples/Bin:/volume/software/common/foreign_packages/OpenNI2/2.2.0/osl42-x86_64/Tools:${PATH} 
+export LD_LIBRARY_PATH=/volume/software/common/foreign_packages/OpenCV/3.1.0/lib/osl42-x86_64:/volume/software/common/foreign_packages/gdal/1.10.1/lib/osl42-x86_64:/volume/software/common/foreign_packages/tbb/4.3.0/lib/osl42-x86_64:/volume/software/common/foreign_packages/OpenNI2/2.2.0/osl42-x86_64/Redist:${LD_LIBRARY_PATH} 
+export PYTHONPATH=/volume/software/common/foreign_packages/OpenCV/3.1.0/python/osl42-x86_64:/volume/software/common/foreign_packages/gdal/1.10.1/python/osl42-x86_64:/volume/software/common/foreign_packages/vtk/6.3.0/python/osl42-x86_64:${PYTHONPATH} 
+export CLASSPATH=/volume/software/common/foreign_packages/OpenCV/3.1.0/java/osl42-x86_64/opencv-310.jar:${CLASSPATH} 
+export PKG_CONFIG_PATH=/volume/software/common/foreign_packages/OpenCV/3.1.0/lib/osl42-x86_64/pkgconfig:/volume/software/common/foreign_packages/tbb/4.3.0/lib/osl42-x86_64/pkgconfig:${PKG_CONFIG_PATH} 
+export OPENNI2_INCLUDE=/volume/software/common/foreign_packages/OpenNI2/2.2.0/osl42-x86_64/Include 
+export CMAKE_PREFIX_PATH=/volume/software/common/cmake/osl42-x86_64/OpenCV/3.1.0:/volume/software/common/cmake/osl42-x86_64/gdal/1.10.1:/volume/software/common/cmake/osl42-x86_64/tbb/4.3.0:/volume/software/common/cmake/osl42-x86_64/OpenNI2/2.2.0:${CMAKE_PREFIX_PATH} 
+export OPENNI2_REDIST=/volume/software/common/foreign_packages/OpenNI2/2.2.0/osl42-x86_64/Redist 
+ 
+#execute command line
+$*
+

@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# setup environment
+export ARCH=osl42-x86_64 
+export PATH=/volume/software/common/foreign_packages/tensorflow/1.3.0/osl42-x86_64/bin:/volume/software/common/foreign_packages/CUDA/8.0.61/osl42-x86_64/bin:/volume/software/common/foreign_packages/NumPy/1.13.1/osl42-x86_64/bin:/volume/software/common/foreign_packages/python-wheel/0.29.0/osl42-x86_64/bin:/volume/software/common/foreign_packages/OpenBLAS/0.2.20/osl42-x86_64/bin:${PATH} 
+export LD_LIBRARY_PATH=/volume/software/common/foreign_packages/CUDA/8.0.61/osl42-x86_64/lib64:/volume/software/common/foreign_packages/CUDNN/6.0.21/osl42-x86_64/lib64:/volume/software/common/foreign_packages/OpenBLAS/0.2.20/osl42-x86_64/lib:${LD_LIBRARY_PATH} 
+export PYTHONPATH=/volume/software/common/foreign_packages/tensorflow/1.3.0/osl42-x86_64/lib/python2.7/site-packages:/volume/software/common/foreign_packages/NumPy/1.13.1/osl42-x86_64/lib/python2.7/site-packages:/volume/software/common/foreign_packages/python-wheel/0.29.0/osl42-x86_64/lib/python2.7/site-packages:${PYTHONPATH} 
+export CUDNN_ROOT=/volume/software/common/foreign_packages/CUDNN/6.0.21/osl42-x86_64 
+export CUDA_BIN_PATH=/volume/software/common/foreign_packages/CUDA/8.0.61/osl42-x86_64/bin 
+export CMAKE_PREFIX_PATH=/volume/software/common/cmake/osl42-x86_64/CUDA/8.0.61:/volume/software/common/cmake/osl42-x86_64/CUDNN/6.0.21:/volume/software/common/cmake/osl42-x86_64/OpenBLAS/0.2.20:${CMAKE_PREFIX_PATH} 
+export PATH=/volume/software/common/foreign_packages/python-wheel/0.29.0/osl42-x86_64/bin:${PATH} 
+ 
+#execute command line
+$*
+

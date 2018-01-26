@@ -31,6 +31,7 @@ def execute(self):
     cfg["head"] = q[17:19]
     app.rave.set_config_dict(cfg)
     app.rave.set_frame("Justin", metainfo["Justin_frame"])
+    #return
     head = app.rave.get_manip_frame("head")
     roi_frame = odb_utils.float16_to_array(app.wsr.object_store["tray"]["toolframe"]) 
     object_frame = app.rave.get_frame(object_of_interest)
@@ -39,7 +40,7 @@ def execute(self):
     center = dot(head, metainfo["ext"])
     app.center = center
     #app.rave.add_coord("center", center)
-
+    
     img_name = app.out_dir + 'heat_map_th4.jpeg' 
     print "Reading Image" , img_name
     image = cv2.imread(img_name)
